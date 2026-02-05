@@ -9,6 +9,10 @@ pub struct PrayerEngineConfig {
     pub start_lag_seconds: i64,
     pub buffer_before_start_seconds: i64,
     pub grace_seconds: i64,
+    /// How long to show "prayer ended" message after estimated end (default: 28 minutes)
+    pub post_prayer_display_minutes: i64,
+    /// Window where user might still catch the prayer after estimated end (default: 3 minutes)
+    pub catch_up_minutes: i64,
     pub default_rakah_counts: HashMap<String, i32>,
 }
 
@@ -27,6 +31,8 @@ impl Default for PrayerEngineConfig {
             start_lag_seconds: 0,
             buffer_before_start_seconds: 30,
             grace_seconds: 60,
+            post_prayer_display_minutes: 28, // Show "ended" message for 28 minutes
+            catch_up_minutes: 3,             // ±3 min window to still catch prayer
             default_rakah_counts,
         }
     }
@@ -104,13 +110,17 @@ impl NextPrayerResult {
 /// Rakah estimation result
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct RakahEstimate {
-    pub status: String, // 'not_started', 'in_progress', 'likely_finished', 'not_available'
+    pub status: String, // 'not_started', 'in_progress', 'likely_finished', 'recently_finished', 'not_available'
     pub current_rakah: Option<i32>,
     pub total_rakah: i32,
     pub elapsed_secs: Option<i64>,
     pub remaining_secs: Option<i64>,
     pub progress: f64,
     pub is_estimate: bool,
+    /// Minutes since prayer ended (only for recently_finished status)
+    pub ended_minutes_ago: Option<i64>,
+    /// Whether it's still possible to catch the prayer (within catch-up window)
+    pub can_still_catch: bool,
 }
 
 impl RakahEstimate {
@@ -123,6 +133,8 @@ impl RakahEstimate {
             remaining_secs: None,
             progress: 0.0,
             is_estimate: false,
+            ended_minutes_ago: None,
+            can_still_catch: false,
         }
     }
 }

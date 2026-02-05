@@ -38,13 +38,17 @@ export interface NextPrayerResult {
 }
 
 export interface RakahEstimate {
-  status: 'not_started' | 'in_progress' | 'likely_finished' | 'not_available';
+  status: 'not_started' | 'in_progress' | 'likely_finished' | 'recently_finished' | 'not_available';
   current_rakah?: number;
   total_rakah: number;
   elapsed_secs?: number;
   remaining_secs?: number;
   progress: number;
   is_estimate: boolean;
+  /** Minutes since prayer ended (only for recently_finished status) */
+  ended_minutes_ago?: number;
+  /** Whether it's still possible to catch the prayer (within catch-up window) */
+  can_still_catch: boolean;
 }
 
 export interface TravelPrediction {

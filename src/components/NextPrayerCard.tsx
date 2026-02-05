@@ -174,7 +174,7 @@ export const NextPrayerCard = () => {
         )}
 
         {/* LIVE Rakah Estimation - Only for today */}
-        {isToday && rakahEstimate && rakahEstimate.status !== 'not_available' && (
+        {isToday && rakahEstimate && rakahEstimate.status !== 'not_available' && rakahEstimate.status !== 'likely_finished' && (
           <div className="bg-emerald-900/20 border border-emerald-500/30 rounded-lg p-4">
             <div className="flex items-center justify-between mb-3">
               <span className="live-badge">LIVE (estimated)</span>
@@ -218,10 +218,26 @@ export const NextPrayerCard = () => {
               </>
             )}
 
-            {rakahEstimate.status === 'likely_finished' && (
-              <p className="text-emerald-400/70 text-center">
-                Prayer likely finished
-              </p>
+            {rakahEstimate.status === 'recently_finished' && (
+              <div className="text-center">
+                <div className="flex items-center justify-center gap-2 mb-2">
+                  <span className="w-2 h-2 rounded-full bg-amber-400" />
+                  <span className="text-amber-400 font-medium">
+                    {rakahEstimate.ended_minutes_ago === 1 
+                      ? 'Just ended' 
+                      : `Ended ~${rakahEstimate.ended_minutes_ago} min ago`}
+                  </span>
+                </div>
+                {rakahEstimate.can_still_catch ? (
+                  <p className="text-sm text-emerald-400 animate-pulse">
+                    You may still catch the prayer! ±3 min window
+                  </p>
+                ) : (
+                  <p className="text-xs text-gray-400">
+                    Next prayer countdown starting soon
+                  </p>
+                )}
+              </div>
             )}
           </div>
         )}

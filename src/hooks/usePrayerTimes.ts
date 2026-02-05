@@ -143,47 +143,84 @@ export const useRakahEstimate = (prayerName: string | null) => {
             total_rakah: prayer.name === 'Fajr' ? 2 : prayer.name === 'Maghrib' ? 3 : 4,
             progress: 0,
             is_estimate: false,
+            can_still_catch: false,
           });
           return;
         }
 
         const elapsed = now.getTime() - iqamaTime.getTime();
+        const elapsedSeconds = Math.floor(elapsed / 1000);
         
+        // Configuration
+        const rakahDuration = 144; // 2.4 minutes in seconds
+        const totalRakah = prayer.name === 'Fajr' ? 2 : prayer.name === 'Maghrib' ? 3 : 4;
+        const postPrayerDisplayMinutes = 28; // Show "ended" for 28 minutes
+        const catchUpMinutes = 3; // ±3 min window to catch prayer
+        
+        const estimatedDurationSeconds = totalRakah * rakahDuration;
+        const prayerEndSeconds = estimatedDurationSeconds;
+        const postPrayerWindowSeconds = postPrayerDisplayMinutes * 60;
+        const catchUpWindowSeconds = catchUpMinutes * 60;
+        
+        // Not started yet
         if (elapsed < 0) {
           setRakahEstimate({
             status: 'not_started',
-            total_rakah: prayer.name === 'Fajr' ? 2 : prayer.name === 'Maghrib' ? 3 : 4,
+            total_rakah: totalRakah,
             remaining_secs: Math.floor(-elapsed / 1000),
             progress: 0,
             is_estimate: true,
+            can_still_catch: false,
           });
-        } else {
-          const rakahDuration = 144; // 2.4 minutes in seconds
-          const totalRakah = prayer.name === 'Fajr' ? 2 : prayer.name === 'Maghrib' ? 3 : 4;
-          const rakahIndex = Math.floor(elapsed / 1000 / rakahDuration) + 1;
-          const currentRakah = Math.min(rakahIndex, totalRakah);
-          const progress = Math.min(1.0, (elapsed / 1000) / (totalRakah * rakahDuration));
-
-          if (rakahIndex > totalRakah) {
-            setRakahEstimate({
-              status: 'likely_finished',
-              current_rakah: totalRakah,
-              total_rakah: totalRakah,
-              elapsed_secs: Math.floor(elapsed / 1000),
-              progress: 1.0,
-              is_estimate: true,
-            });
-          } else {
-            setRakahEstimate({
-              status: 'in_progress',
-              current_rakah: currentRakah,
-              total_rakah: totalRakah,
-              elapsed_secs: Math.floor(elapsed / 1000),
-              progress: progress,
-              is_estimate: true,
-            });
-          }
+          return;
         }
+        
+        // Prayer ended, but within post-prayer display window (28 min)
+        if (elapsedSeconds > prayerEndSeconds && elapsedSeconds <= prayerEndSeconds + postPrayerWindowSeconds) {
+          const endedMinutesAgo = Math.ceil((elapsedSeconds - prayerEndSeconds) / 60);
+          const canStillCatch = elapsedSeconds <= prayerEndSeconds + catchUpWindowSeconds;
+          
+          setRakahEstimate({
+            status: 'recently_finished',
+            current_rakah: totalRakah,
+            total_rakah: totalRakah,
+            elapsed_secs: elapsedSeconds,
+            progress: 1.0,
+            is_estimate: true,
+            ended_minutes_ago: endedMinutesAgo,
+            can_still_catch: canStillCatch,
+          });
+          return;
+        }
+        
+        // Beyond post-prayer window - don't show live status
+        if (elapsedSeconds > prayerEndSeconds + postPrayerWindowSeconds) {
+          setRakahEstimate({
+            status: 'likely_finished',
+            current_rakah: totalRakah,
+            total_rakah: totalRakah,
+            elapsed_secs: elapsedSeconds,
+            progress: 1.0,
+            is_estimate: true,
+            can_still_catch: false,
+          });
+          return;
+        }
+        
+        // In progress - calculate rakah
+        const rakahIndex = Math.floor(elapsedSeconds / rakahDuration) + 1;
+        const currentRakah = Math.min(rakahIndex, totalRakah);
+        const progress = Math.min(1.0, elapsedSeconds / estimatedDurationSeconds);
+
+        setRakahEstimate({
+          status: 'in_progress',
+          current_rakah: currentRakah,
+          total_rakah: totalRakah,
+          elapsed_secs: elapsedSeconds,
+          progress: progress,
+          is_estimate: true,
+          can_still_catch: false,
+        });
       } catch (err) {
         console.error('Failed to estimate rakah:', err);
       }

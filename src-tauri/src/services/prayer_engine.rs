@@ -82,6 +82,7 @@ impl PrayerEngine {
     }
 
     /// Estimate current rakah during prayer
+    /// Includes post-prayer window (28 minutes) to show "ended X min ago" message
     pub fn estimate_rakah(&self, prayer: &Prayer, now: DateTime<Utc>) -> RakahEstimate {
         if !prayer.has_iqama() {
             return RakahEstimate::not_available(
@@ -95,6 +96,7 @@ impl PrayerEngine {
         let estimated_duration = Duration::seconds(total_rakah as i64 * self.config.rakah_duration_seconds);
         let prayer_end = prayer_start + estimated_duration;
         let grace_end = prayer_end + Duration::seconds(self.config.grace_seconds);
+        let post_prayer_window = prayer_end + Duration::minutes(self.config.post_prayer_display_minutes);
 
         // Not started yet
         if now < prayer_start {
@@ -106,11 +108,33 @@ impl PrayerEngine {
                 remaining_secs: Some((prayer_start - now).num_seconds()),
                 progress: 0.0,
                 is_estimate: true,
+                ended_minutes_ago: None,
+                can_still_catch: false,
             };
         }
 
-        // Likely finished
-        if now > grace_end {
+        // Prayer ended, but within post-prayer display window (28 min)
+        // Show "ended X minutes ago" with optional "you may still catch it"
+        if now > prayer_end && now <= post_prayer_window {
+            let ended_minutes_ago = ((now - prayer_end).num_seconds() as f64 / 60.0).ceil() as i64;
+            let catch_up_window = prayer_end + Duration::minutes(self.config.catch_up_minutes);
+            let can_still_catch = now <= catch_up_window;
+
+            return RakahEstimate {
+                status: "recently_finished".to_string(),
+                current_rakah: Some(total_rakah),
+                total_rakah,
+                elapsed_secs: Some((now - prayer_start).num_seconds()),
+                remaining_secs: None,
+                progress: 1.0,
+                is_estimate: true,
+                ended_minutes_ago: Some(ended_minutes_ago),
+                can_still_catch,
+            };
+        }
+
+        // Beyond post-prayer window - don't show live status at all
+        if now > post_prayer_window {
             return RakahEstimate {
                 status: "likely_finished".to_string(),
                 current_rakah: Some(total_rakah),
@@ -119,6 +143,23 @@ impl PrayerEngine {
                 remaining_secs: None,
                 progress: 1.0,
                 is_estimate: true,
+                ended_minutes_ago: None,
+                can_still_catch: false,
+            };
+        }
+
+        // Grace period - prayer might be finishing
+        if now > prayer_end && now <= prayer_end + Duration::seconds(self.config.grace_seconds) {
+            return RakahEstimate {
+                status: "in_progress".to_string(),
+                current_rakah: Some(total_rakah),
+                total_rakah,
+                elapsed_secs: Some((now - prayer_start).num_seconds()),
+                remaining_secs: Some(0),
+                progress: 1.0,
+                is_estimate: true,
+                ended_minutes_ago: None,
+                can_still_catch: false,
             };
         }
 
@@ -140,6 +181,8 @@ impl PrayerEngine {
             },
             progress: progress.clamp(0.0, 1.0),
             is_estimate: true,
+            ended_minutes_ago: None,
+            can_still_catch: false,
         }
     }
 
@@ -428,16 +471,16 @@ mod tests {
     fn test_live_status_at_last_rakah() {
         let engine = PrayerEngine::with_defaults();
         let schedule = create_test_schedule();
-        let prayer = &schedule.maghrib; // 3 rakahs
+        let prayer = &schedule.maghrib; // 3 rakahs = ~7.2 min
 
-        // 8 minutes after iqama (within last rakah for maghrib)
-        // 8 min / 2.4 min per rakah = 3.33 -> 3rd (last) rakah
-        let now = prayer.iqama.unwrap() + Duration::minutes(8);
+        // 6 minutes after iqama (within last rakah for maghrib)
+        // 6 min / 2.4 min per rakah = 2.5 -> 3rd (last) rakah
+        let now = prayer.iqama.unwrap() + Duration::minutes(6);
         let estimate = engine.estimate_rakah(prayer, now);
 
         assert_eq!(estimate.status, "in_progress");
         assert_eq!(estimate.current_rakah, Some(3));
-        assert!(estimate.progress > 0.8);
+        assert!(estimate.progress > 0.6);
     }
 
     #[test]
@@ -446,15 +489,61 @@ mod tests {
         let schedule = create_test_schedule();
         let prayer = &schedule.fajr; // 2 rakahs = ~4.8 minutes
 
-        // 10 minutes after iqama (definitely finished)
-        // 10 min / 2.4 min per rakah = 4.16 > 2 rakahs
-        let now = prayer.iqama.unwrap() + Duration::minutes(10);
+        // 6 minutes after iqama (finished ~1.2 min ago, within post-prayer window)
+        // Should show "recently_finished" with can_still_catch = true (within 3 min)
+        let now = prayer.iqama.unwrap() + Duration::minutes(6);
+        let estimate = engine.estimate_rakah(prayer, now);
+
+        assert_eq!(estimate.status, "recently_finished");
+        assert_eq!(estimate.current_rakah, Some(2)); // Last rakah
+        assert_eq!(estimate.progress, 1.0);
+        assert!(estimate.elapsed_secs.unwrap() >= 360);
+        assert!(estimate.can_still_catch); // Within 3-min catch-up window
+        assert_eq!(estimate.ended_minutes_ago, Some(2)); // 6 - 4.8 ≈ 2 min ago
+    }
+
+    #[test]
+    fn test_live_status_prayer_finished_long_ago() {
+        let engine = PrayerEngine::with_defaults();
+        let schedule = create_test_schedule();
+        let prayer = &schedule.fajr; // 2 rakahs = ~4.8 minutes
+
+        // 35 minutes after iqama (well past the 28-min post-prayer window)
+        let now = prayer.iqama.unwrap() + Duration::minutes(35);
         let estimate = engine.estimate_rakah(prayer, now);
 
         assert_eq!(estimate.status, "likely_finished");
-        assert_eq!(estimate.current_rakah, Some(2)); // Last rakah
-        assert_eq!(estimate.progress, 1.0);
-        assert!(estimate.elapsed_secs.unwrap() >= 600);
+        assert_eq!(estimate.current_rakah, Some(2));
+        assert!(!estimate.can_still_catch);
+    }
+
+    #[test]
+    fn test_live_status_recently_finished_catch_up() {
+        let engine = PrayerEngine::with_defaults();
+        let schedule = create_test_schedule();
+        let prayer = &schedule.dhuhr; // 4 rakahs = ~9.6 minutes
+
+        // 12 minutes after iqama (ended ~2.4 min ago, within catch-up window)
+        let now = prayer.iqama.unwrap() + Duration::minutes(12);
+        let estimate = engine.estimate_rakah(prayer, now);
+
+        assert_eq!(estimate.status, "recently_finished");
+        assert!(estimate.can_still_catch); // Within 3-min catch-up window
+        assert_eq!(estimate.ended_minutes_ago, Some(3)); // 12 - 9.6 ≈ 3 min ago
+    }
+
+    #[test]
+    fn test_live_status_recently_finished_missed() {
+        let engine = PrayerEngine::with_defaults();
+        let schedule = create_test_schedule();
+        let prayer = &schedule.dhuhr; // 4 rakahs = ~9.6 minutes
+
+        // 15 minutes after iqama (ended ~5.4 min ago, past catch-up window)
+        let now = prayer.iqama.unwrap() + Duration::minutes(15);
+        let estimate = engine.estimate_rakah(prayer, now);
+
+        assert_eq!(estimate.status, "recently_finished");
+        assert!(!estimate.can_still_catch); // Past 3-min catch-up window
     }
 
     #[test]

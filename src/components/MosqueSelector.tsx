@@ -127,6 +127,14 @@ export const MosqueSelector = () => {
         
         // Add to favorites automatically
         await addFavorite(mosque);
+        
+        // Save selected mosque for persistence
+        try {
+          await tauri.saveSelectedMosque(mosque);
+          console.log('Saved selected mosque to database (manual URL)');
+        } catch (saveErr) {
+          console.error('Failed to save mosque selection:', saveErr);
+        }
       }
     } catch (err) {
       console.error('Failed to load prayer times:', err);

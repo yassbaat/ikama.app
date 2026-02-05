@@ -393,20 +393,33 @@ pub async fn save_selected_mosque(
     mosque: Mosque,
     db: State<'_, Database>,
 ) -> Result<(), String> {
+    log::info!("Saving selected mosque: {} (id: {})", mosque.name, mosque.id);
+    
     // Save mosque to database with last_accessed timestamp
     let mosque = Mosque {
         last_accessed: Some(chrono::Utc::now()),
         ..mosque
     };
 
-    db.save_mosque(&mosque)
-        .await
-        .map_err(|e| format!("Database error: {}", e))?;
+    match db.save_mosque(&mosque).await {
+        Ok(_) => log::info!("Mosque saved successfully"),
+        Err(e) => {
+            log::error!("Failed to save mosque: {}", e);
+            return Err(format!("Database error: {}", e));
+        }
+    }
 
     // Store the selected mosque ID in settings
-    db.set_setting("selected_mosque_id", &mosque.id)
-        .await
-        .map_err(|e| format!("Failed to save setting: {}", e))
+    match db.set_setting("selected_mosque_id", &mosque.id).await {
+        Ok(_) => {
+            log::info!("Selected mosque ID saved to settings");
+            Ok(())
+        }
+        Err(e) => {
+            log::error!("Failed to save setting: {}", e);
+            Err(format!("Failed to save setting: {}", e))
+        }
+    }
 }
 
 /// Get the last selected mosque
@@ -414,12 +427,62 @@ pub async fn save_selected_mosque(
 pub async fn get_selected_mosque(db: State<'_, Database>) -> Result<Option<Mosque>, String> {
     // Get the selected mosque ID from settings
     let mosque_id = match db.get_setting("selected_mosque_id").await {
-        Ok(Some(id)) => id,
-        _ => return Ok(None),
+        Ok(Some(id)) => {
+            log::info!("Found saved mosque ID in settings: {}", id);
+            id
+        }
+        Ok(None) => {
+            log::info!("No saved mosque ID found in settings");
+            return Ok(None);
+        }
+        Err(e) => {
+            log::error!("Error reading settings: {}", e);
+            return Ok(None);
+        }
     };
 
     // Get mosque details
-    db.get_mosque(&mosque_id)
-        .await
-        .map_err(|e| format!("Database error: {}", e))
+    match db.get_mosque(&mosque_id).await {
+        Ok(mosque) => {
+            if mosque.is_some() {
+                log::info!("Successfully retrieved saved mosque: {}", mosque_id);
+            } else {
+                log::warn!("Saved mosque ID {} not found in mosques table", mosque_id);
+            }
+            Ok(mosque)
+        }
+        Err(e) => {
+            log::error!("Database error retrieving mosque: {}", e);
+            Err(format!("Database error: {}", e))
+        }
+    }
+}
+
+/// Check database health and persistence status
+#[tauri::command]
+pub async fn check_database_health() -> Result<serde_json::Value, String> {
+    let app_dir = match dirs::data_dir() {
+        Some(dir) => dir.join("iqamah"),
+        None => return Err("Could not find data directory".to_string()),
+    };
+    
+    let db_path = app_dir.join("iqamah.db");
+    
+    // Check if database file exists
+    let file_exists = db_path.exists();
+    let file_size = if file_exists {
+        std::fs::metadata(&db_path)
+            .map(|m| m.len())
+            .unwrap_or(0)
+    } else {
+        0
+    };
+    
+    Ok(serde_json::json!({
+        "db_path": db_path.to_string_lossy().to_string(),
+        "file_exists": file_exists,
+        "file_size_bytes": file_size,
+        "app_dir_exists": app_dir.exists(),
+        "app_dir_path": app_dir.to_string_lossy().to_string(),
+    }))
 }

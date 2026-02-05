@@ -18,8 +18,8 @@ fn main() {
         .setup(|app| {
             let app_handle = app.handle();
             
-            // Initialize database
-            let database_result: anyhow::Result<Database> = tauri::async_runtime::block_on(async move {
+            // Initialize database with better error handling
+            let database_result: anyhow::Result<(Database, String)> = tauri::async_runtime::block_on(async move {
                 let app_dir = match dirs::data_dir() {
                     Some(dir) => dir.join("iqamah"),
                     None => {
@@ -27,33 +27,51 @@ fn main() {
                     }
                 };
 
-                std::fs::create_dir_all(&app_dir)?;
+                // Ensure the directory exists
+                if let Err(e) = std::fs::create_dir_all(&app_dir) {
+                    return Err(anyhow::anyhow!("Failed to create app directory: {}", e));
+                }
 
                 let db_path = app_dir.join("iqamah.db");
                 let db_path_str = db_path.to_string_lossy().to_string();
                 
                 log::info!("Initializing database at: {}", db_path_str);
                 
-                let pool = db::migrations::create_database(&db_path_str).await?;
-                Ok(Database::new(pool))
+                match db::migrations::create_database(&db_path_str).await {
+                    Ok(pool) => Ok((Database::new(pool), db_path_str)),
+                    Err(e) => Err(anyhow::anyhow!("Database creation failed: {}", e)),
+                }
             });
 
             match database_result {
-                Ok(database) => {
-                    log::info!("Database initialized successfully");
+                Ok((database, path)) => {
+                    log::info!("Database initialized successfully at: {}", path);
                     app_handle.manage(database);
+                    
+                    // Store the database path for debugging
+                    let db_path_clone = path.clone();
+                    tauri::async_runtime::spawn(async move {
+                        log::info!("Database persistence path: {}", db_path_clone);
+                    });
                 }
                 Err(e) => {
                     log::error!("Failed to initialize database: {}", e);
-                    // Create a fallback in-memory database
+                    // Create a fallback in-memory database as last resort
                     let fallback_result: anyhow::Result<Database> = tauri::async_runtime::block_on(async {
-                        let pool = db::migrations::create_database(":memory:").await?;
+                        let pool = db::migrations::create_database(":memory:").await
+                            .map_err(|e| anyhow::anyhow!("Failed to create in-memory DB: {}", e))?;
                         Ok(Database::new(pool))
                     });
                     
-                    if let Ok(database) = fallback_result {
-                        log::warn!("Using in-memory database as fallback");
-                        app_handle.manage(database);
+                    match fallback_result {
+                        Ok(database) => {
+                            log::warn!("Using in-memory database as fallback - data will NOT persist!");
+                            app_handle.manage(database);
+                        }
+                        Err(e2) => {
+                            log::error!("Critical: Failed to create any database: {}", e2);
+                            panic!("Cannot start application without database");
+                        }
                     }
                 }
             }
@@ -74,6 +92,7 @@ fn main() {
             commands::test_provider_connection,
             commands::save_selected_mosque,
             commands::get_selected_mosque,
+            commands::check_database_health,
             // Prayer commands
             commands::get_next_prayer,
             commands::get_prayer_times,

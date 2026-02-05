@@ -37,6 +37,16 @@ export const getSelectedMosque = async (): Promise<Mosque | null> => {
   return invoke('get_selected_mosque');
 };
 
+export const checkDatabaseHealth = async (): Promise<{
+  db_path: string;
+  file_exists: boolean;
+  file_size_bytes: number;
+  app_dir_exists: boolean;
+  app_dir_path: string;
+}> => {
+  return invoke('check_database_health');
+};
+
 export const getMosqueDetails = async (mosqueId: string): Promise<Mosque | null> => {
   return invoke('get_mosque_details', { mosqueId });
 };

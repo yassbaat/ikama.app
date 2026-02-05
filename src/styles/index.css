@@ -1,0 +1,86 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --color-primary-50: 240 249 255;
+    --color-primary-100: 224 242 254;
+    --color-primary-500: 14 165 233;
+    --color-primary-600: 2 132 199;
+    --color-primary-700: 3 105 161;
+  }
+
+  * {
+    @apply border-gray-700;
+  }
+
+  body {
+    @apply bg-gray-900 text-white antialiased;
+  }
+}
+
+@layer components {
+  .glass {
+    @apply bg-white/5 backdrop-blur-lg border border-white/10;
+  }
+
+  .glass-card {
+    @apply bg-gray-800/50 backdrop-blur-lg border border-gray-700/50 rounded-xl shadow-xl;
+  }
+
+  .gradient-text {
+    @apply bg-clip-text text-transparent bg-gradient-to-r;
+  }
+
+  .btn-primary {
+    @apply px-4 py-2 bg-primary-600 hover:bg-primary-700 text-white rounded-lg 
+           transition-all duration-200 font-medium shadow-lg shadow-primary-600/20
+           hover:shadow-primary-600/30 active:scale-95;
+  }
+
+  .btn-secondary {
+    @apply px-4 py-2 bg-gray-700 hover:bg-gray-600 text-white rounded-lg 
+           transition-all duration-200 font-medium active:scale-95;
+  }
+
+  .input-field {
+    @apply px-4 py-2 bg-gray-800 border border-gray-700 rounded-lg 
+           focus:ring-2 focus:ring-primary-500 focus:border-transparent
+           placeholder-gray-500 text-white transition-all duration-200;
+  }
+
+  .prayer-card {
+    @apply p-4 rounded-xl border border-gray-700/50 bg-gray-800/30 
+           transition-all duration-200 hover:bg-gray-800/50;
+  }
+
+  .prayer-card.active {
+    @apply bg-primary-900/20 border-primary-500/50 shadow-lg shadow-primary-500/10;
+  }
+
+  .countdown-number {
+    @apply text-4xl md:text-5xl font-bold tabular-nums tracking-tight;
+  }
+
+  .live-badge {
+    @apply inline-flex items-center px-2 py-0.5 rounded text-xs font-medium
+           bg-emerald-500/20 text-emerald-400 border border-emerald-500/30;
+  }
+
+  .live-badge::before {
+    content: '';
+    @apply w-1.5 h-1.5 rounded-full bg-emerald-400 mr-1.5 animate-pulse;
+  }
+}
+
+@layer utilities {
+  .scrollbar-hide {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+  
+  .scrollbar-hide::-webkit-scrollbar {
+    display: none;
+  }
+}

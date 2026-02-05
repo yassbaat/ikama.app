@@ -1,0 +1,46 @@
+[package]
+name = "iqamah"
+version = "1.0.0"
+description = "Cross-platform prayer times app with Mawaqit integration"
+authors = ["iqamah.com"]
+license = "MIT"
+repository = ""
+edition = "2021"
+
+[lib]
+name = "iqamah_lib"
+crate-type = ["staticlib", "cdylib", "rlib"]
+
+[[bin]]
+name = "iqamah"
+path = "src/main.rs"
+
+[build-dependencies]
+tauri-build = { version = "1.5", features = [] }
+
+[dependencies]
+tauri = { version = "1.5", features = ["notification-all", "shell-open", "fs-create-dir", "fs-exists", "fs-read-dir", "fs-read-file", "fs-write-file", "path-all", "window-close", "window-hide", "window-maximize", "window-minimize", "window-show", "window-start-dragging", "window-unmaximize", "window-unminimize"] }
+tokio = { version = "1.35", features = ["full"] }
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+chrono = { version = "0.4", features = ["serde"] }
+reqwest = { version = "0.11", features = ["json", "rustls-tls"] }
+scraper = "0.18"
+url = "2.5"
+thiserror = "1.0"
+anyhow = "1.0"
+log = "0.4"
+env_logger = "0.11"
+
+# Database
+sqlx = { version = "0.7", features = ["runtime-tokio-native-tls", "sqlite", "chrono"] }
+
+# Configuration
+dirs = "5.0"
+regex = "1.10"
+async-trait = "0.1"
+lazy_static = "1.4"
+
+[features]
+default = ["custom-protocol"]
+custom-protocol = ["tauri/custom-protocol"]

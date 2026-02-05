@@ -1,0 +1,1 @@
+continue using the "times" property... however only use that "calendar" property to fetch the dates for other dates... also, save the mosuqe selected in the memory so that we do not need to fetch the mosque everytime... also , enable notifications for both the prayer and the iqamah. make sure also that they fetching of the mosques using the search field works as intended

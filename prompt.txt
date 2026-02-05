@@ -1,0 +1,189 @@
+You are a senior product engineer + architect. Build a cross-platform app (Android + Windows + macOS) that integrates Mawaqit mosque prayer times & iqama times, provides live countdowns, and an “estimated LIVE prayer status” feature (rakʿah estimation), plus travel-time ETA (“when should I leave?” and “which rakʿah will I catch?”).
+
+NON-NEGOTIABLE CONSTRAINTS
+1) Mawaqit’s API is publicly stated as private (not publicly available). The system must support:
+   - Provider A (Preferred): Official/private access if the user provides credentials or an API token and base URL/endpoint details obtained from Mawaqit.
+   - Provider B: Unofficial endpoint (user-supplied base URL for a community REST wrapper).
+   - Provider C: HTML scraping fallback (only if user opts-in) with robust parsing, caching, and rate limits.
+   Build all data access behind a “PrayerDataProvider” interface so switching providers is trivial.
+
+2) The “LIVE” rakʿah status is ONLY an ESTIMATION. UI must always show a badge like:
+   “LIVE (estimated)” + a short disclaimer string (configurable) that avoids discouraging attendance (e.g., “Estimate—still go; you may catch it.”).
+
+3) The app must be single codebase where practical.
+   Choose ONE primary tech stack and implement it:
+   - Preferred: Flutter (Dart) for Android/Windows/macOS with platform-specific plugins where needed (notifications/background).
+   - Alternative: Kotlin Multiplatform + Compose Multiplatform desktop.
+   Pick one, commit fully, and provide a working build setup.
+
+PRIMARY FEATURES
+A) Mosque selection & data
+- Search by name/city; also allow “Nearest mosques” using geolocation (optional).
+- Save favorites (multiple mosques), one “active” mosque.
+- Show today’s prayers: Fajr, Dhuhr, Asr, Maghrib, Isha (+ optionally Jumu’ah if present).
+- For each prayer: adhan time, iqama time.
+- Cache daily schedules locally (SQLite). Offline mode uses cache.
+- Automatic refresh cadence:
+  - Once per day after midnight local time.
+  - On app open.
+  - Manual refresh.
+
+B) Countdown UX (“smooth”)
+- Main widget/card: “Next prayer” with:
+  - Prayer name
+  - Time until adhan
+  - Time until iqama
+  - A big countdown (iqama-based)
+- Secondary list: all prayers for today with times.
+- Notifications:
+  - Android: persistent ongoing notification (acts like a “band companion display”).
+  - Windows/macOS: system notifications + optional tray menu quick view.
+- Notification schedule:
+  - T-15 min, T-10, T-5, T-2, T-1, T-30s, T-0.
+  - Configurable per user.
+
+C) LIVE prayer estimation (rakʿah progress)
+Goal: after iqama starts, estimate which rakʿah the congregation is in.
+
+Config defaults:
+- rakahDurationSeconds = 144 (2.4 minutes) (user-configurable)
+- startLagSeconds = 0..120 (optional user-configurable “imam starts after iqama” fudge)
+- bufferBeforeStartSeconds = 30 (for “arrive 30s early” default)
+- Prayer rakʿah counts (must be correct defaults; allow user override):
+  - Fajr = 2
+  - Dhuhr = 4
+  - Asr = 4
+  - Maghrib = 3
+  - Isha = 4
+  - Jumu’ah = 2 (optional if data includes it)
+
+Algorithm:
+1) Determine “active prayer window”:
+   - prayerStart = iqamaTime + startLagSeconds
+   - If now < prayerStart: status = “Not started” + show countdown to start
+2) If now >= prayerStart:
+   elapsed = now - prayerStart
+   rakahIndex = floor(elapsed / rakahDurationSeconds) + 1
+   clamp rakahIndex to [1..rakahCount]
+   prayerEstimatedEnd = prayerStart + (rakahCount * rakahDurationSeconds)
+   If now > prayerEstimatedEnd + graceSeconds(=60): status = “Likely finished (estimated)”
+3) UI:
+   - Always display: “LIVE (estimated)”
+   - Show: “Prayer started X min ago (est.)”
+   - Show: “Rakʿah N / total”
+   - Progress bar: elapsed / totalEstimatedDuration
+   - Never show discouraging language. Use neutral: “Estimated; still go.”
+
+D) Travel time feature (“what rakʿah will I catch?” + “leave now”)
+User inputs:
+- travelTimeSeconds (per mosque; optionally per transport mode)
+- targetArrivalRule:
+  - Default: arrive bufferBeforeStartSeconds before prayerStart
+  - Optional: user chooses “arrive before rakʿah K”, or “arrive before rukūʿ of rakʿah K” (keep simple; implement only “before prayerStart” and “before rakʿah K start” for v1)
+
+Compute:
+- desiredArrivalTime = prayerStart - bufferBeforeStartSeconds
+- recommendedLeaveTime = desiredArrivalTime - travelTimeSeconds
+- If now >= recommendedLeaveTime: show “Leave now” + minutes late/early
+- Predict arrival rakʿah:
+  arrivalTime = now + travelTimeSeconds
+  if arrivalTime < prayerStart: arrivalRakah = 0 (“before start”)
+  else:
+     arrivalElapsed = arrivalTime - prayerStart
+     arrivalRakah = floor(arrivalElapsed / rakahDurationSeconds) + 1
+     if arrivalRakah > rakahCount: “after estimated end”
+- UI copy must include “estimated.”
+
+E) Cross-platform app structure (must implement)
+- Layers:
+  1) data/ (providers, DTOs, parsing, auth, caching)
+  2) domain/ (prayer engine: next prayer, countdown, rakʿah estimation, travel predictions)
+  3) presentation/ (UI)
+  4) platform/ (notifications, background scheduling, permissions)
+- Local DB: SQLite with migrations.
+- Config store: secure storage where needed (tokens); normal preferences for user settings.
+- Strict error handling:
+  - If provider fails: show cached data + “last updated” timestamp
+  - Retry with exponential backoff
+  - Rate limiting (especially for scraping/wrapper mode)
+
+PROVIDER DETAILS (must implement all 3)
+Provider A: Official/private API
+- Design a generic “TokenAuth” + “BaseUrl + endpoints config” system:
+  - The user can paste an API base URL and token (or login credentials)
+  - App stores securely
+  - Provider A uses those to fetch mosque list + times
+
+Provider B: Community wrapper
+- User enters base URL (e.g., https://example.com) + optionally an API key
+- App calls stable JSON endpoints exposed by wrapper
+- Add a “Connectivity test” screen
+
+Provider C: Scraping fallback (opt-in)
+- Given a mosque page URL or mosque identifier:
+  - Fetch HTML
+  - Parse prayer/iqama times
+  - Use strict selectors + resilient parsing
+  - Cache raw HTML for debugging (optional)
+- Add a “Parser self-test” screen that shows extracted fields
+
+BACKGROUND + NOTIFICATIONS
+Android:
+- Implement background update using WorkManager + (optional) foreground service for near-iqama updates.
+- Persistent ongoing notification during an active countdown window (e.g., within next 2 hours).
+- Provide quick actions: “Change mosque”, “Silence for today”, “Open app”.
+
+Windows:
+- Background scheduling using app startup + timer.
+- Toast notifications.
+- Optional tray icon with next prayer + countdown.
+
+macOS:
+- Notification Center notifications.
+- Optional menu bar item with next prayer + countdown.
+
+BUILD/DELIVERABLES
+1) Working app for Android, Windows, macOS.
+2) A reusable pure “PrayerEngine” module with unit tests:
+   - next prayer calculation
+   - rakʿah estimation
+   - travel prediction
+   - day rollover edge cases
+3) Data provider tests with mocked HTTP responses and cached data.
+4) UX details:
+   - “LIVE (estimated)” badge everywhere the estimation appears
+   - Settings screen to tune:
+     - rakahDurationSeconds
+     - startLagSeconds
+     - bufferBeforeStartSeconds
+     - travelTimeSeconds per mosque
+     - notification thresholds
+5) Documentation:
+   - How to configure providers A/B/C
+   - Privacy note: what data is stored locally
+   - Troubleshooting screen exports logs (sanitized)
+
+EDGE CASES TO HANDLE
+- Time zones + DST
+- Midnight rollover (after Isha)
+- Mosque schedule changes during the day
+- Missing iqama (adhan only) -> disable LIVE + show “Iqama unavailable”
+- Jumu’ah special case (Friday)
+- Device clock incorrect -> show warning
+
+OUTPUT FORMAT
+- Provide:
+  - repo structure
+  - key files with full code for the core engine
+  - key files for app UI + notifications
+  - build commands for Android/Windows/macOS
+  - test suite
+  - and a minimal but complete MVP first, then enhancements.
+
+Start by writing:
+(1) Architecture decision (Flutter or KMP) and why
+(2) Data model schemas
+(3) Provider interface + stubs
+(4) PrayerEngine implementation + tests
+(5) UI skeleton + notification pipeline
+Then iterate into a fully working MVP.

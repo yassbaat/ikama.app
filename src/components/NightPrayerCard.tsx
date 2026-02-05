@@ -16,9 +16,29 @@ export const NightPrayerCard = () => {
       const currentTime = new Date();
       setNow(currentTime);
 
+      // Get Maghrib time (start of night)
+      const maghribTime = new Date(currentPrayerTimes.maghrib.adhan);
+      
+      // Get Fajr time - use tomorrow's Fajr if we're after Isha
+      let fajrTime = new Date(currentPrayerTimes.fajr.adhan);
+      const ishaTime = new Date(currentPrayerTimes.isha.adhan);
+      
+      // If we're after Isha, use tomorrow's Fajr
+      if (currentTime > ishaTime) {
+        fajrTime = new Date(fajrTime);
+        fajrTime.setDate(fajrTime.getDate() + 1);
+      }
+      
+      // Also need tomorrow's Maghrib for proper night calculation after Isha
+      let nightStartTime = maghribTime;
+      if (currentTime > ishaTime) {
+        nightStartTime = new Date(maghribTime);
+        nightStartTime.setDate(nightStartTime.getDate() + 1);
+      }
+
       const info = calculateNightPrayer(
-        currentPrayerTimes.maghrib.adhan,
-        currentPrayerTimes.fajr.adhan,
+        nightStartTime.toISOString(),
+        fajrTime.toISOString(),
         currentTime
       );
 
@@ -35,13 +55,25 @@ export const NightPrayerCard = () => {
     return null;
   }
 
-  // Only show after Isha (Maghrib) time
+  // Get times for display logic
   const maghribTime = new Date(currentPrayerTimes.maghrib.adhan).getTime();
+  const ishaTime = new Date(currentPrayerTimes.isha.adhan).getTime();
   const fajrTime = new Date(currentPrayerTimes.fajr.adhan).getTime();
   const currentTime = now.getTime();
 
-  // Don't show if before Maghrib or after Fajr
-  if (currentTime < maghribTime || currentTime >= fajrTime) {
+  // Show card from Maghrib until Fajr (today's Fajr before Isha, tomorrow's after)
+  // Don't show if before today's Maghrib
+  if (currentTime < maghribTime) {
+    return null;
+  }
+  
+  // After Fajr ends, don't show until next Maghrib
+  // (Fajr time is typically 60-90 minutes, so check if we're after Fajr+Isha gap)
+  const isAfterFajr = currentTime > fajrTime + 2 * 60 * 60 * 1000; // 2 hours after Fajr
+  const isBeforeMaghrib = currentTime < maghribTime;
+  
+  // If we're in the daytime period (after Fajr + buffer, before Maghrib), don't show
+  if (isAfterFajr && !isBeforeMaghrib && currentTime < ishaTime) {
     return null;
   }
 

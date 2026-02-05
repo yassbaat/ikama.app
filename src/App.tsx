@@ -1,3 +1,4 @@
+import { useEffect } from 'react';
 import { Header } from './components/Header';
 import { MosqueSelector } from './components/MosqueSelector';
 import { NextPrayerCard } from './components/NextPrayerCard';
@@ -7,10 +8,60 @@ import { ErrorDisplay } from './components/ErrorDisplay';
 import { NightPrayerCard } from './components/NightPrayerCard';
 import { usePrayerTimes } from './hooks/usePrayerTimes';
 import { useStore } from './hooks/useStore';
+import * as tauri from './services/tauri';
 
 function App() {
-  const { isLoading, currentMosque, currentPrayerTimes } = useStore();
+  const { 
+    isLoading, 
+    currentMosque, 
+    currentPrayerTimes, 
+    setCurrentMosque, 
+    setCurrentPrayerTimes, 
+    setError,
+    selectedDate 
+  } = useStore();
   usePrayerTimes();
+
+  // Load saved mosque on startup
+  useEffect(() => {
+    const loadSavedMosque = async () => {
+      // Only load if no mosque is currently selected
+      if (currentMosque) return;
+      
+      try {
+        console.log('Loading saved mosque...');
+        const savedMosque = await tauri.getSelectedMosque();
+        
+        if (savedMosque) {
+          console.log('Found saved mosque:', savedMosque.name);
+          
+          // Load prayer times for the saved mosque
+          try {
+            const prayerTimes = await tauri.getPrayerTimesForMosque(
+              savedMosque.id, 
+              savedMosque.country || 'FR', 
+              selectedDate
+            );
+            
+            setCurrentMosque(savedMosque);
+            setCurrentPrayerTimes(prayerTimes);
+            console.log('Loaded prayer times for saved mosque');
+          } catch (ptErr) {
+            console.error('Failed to load prayer times for saved mosque:', ptErr);
+            // Still set the mosque so user can see it was selected
+            setCurrentMosque(savedMosque);
+            setError('Failed to load prayer times. Please try refreshing or selecting the mosque again.');
+          }
+        } else {
+          console.log('No saved mosque found');
+        }
+      } catch (err) {
+        console.error('Failed to load saved mosque:', err);
+      }
+    };
+
+    loadSavedMosque();
+  }, [currentMosque, setCurrentMosque, setCurrentPrayerTimes, setError, selectedDate]);
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-gray-900 via-gray-900 to-gray-800">

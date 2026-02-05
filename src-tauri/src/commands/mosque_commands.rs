@@ -386,3 +386,40 @@ pub async fn get_active_provider(db: State<'_, Database>) -> Result<Option<Provi
         config_schema: mawaqit.config_schema(),
     }))
 }
+
+/// Save selected mosque for persistence across app restarts
+#[tauri::command]
+pub async fn save_selected_mosque(
+    mosque: Mosque,
+    db: State<'_, Database>,
+) -> Result<(), String> {
+    // Save mosque to database with last_accessed timestamp
+    let mosque = Mosque {
+        last_accessed: Some(chrono::Utc::now()),
+        ..mosque
+    };
+
+    db.save_mosque(&mosque)
+        .await
+        .map_err(|e| format!("Database error: {}", e))?;
+
+    // Store the selected mosque ID in settings
+    db.set_setting("selected_mosque_id", &mosque.id)
+        .await
+        .map_err(|e| format!("Failed to save setting: {}", e))
+}
+
+/// Get the last selected mosque
+#[tauri::command]
+pub async fn get_selected_mosque(db: State<'_, Database>) -> Result<Option<Mosque>, String> {
+    // Get the selected mosque ID from settings
+    let mosque_id = match db.get_setting("selected_mosque_id").await {
+        Ok(Some(id)) => id,
+        _ => return Ok(None),
+    };
+
+    // Get mosque details
+    db.get_mosque(&mosque_id)
+        .await
+        .map_err(|e| format!("Database error: {}", e))
+}

@@ -149,6 +149,14 @@ export const MosqueSelector = () => {
       setCurrentMosque(mosque);
       setCurrentPrayerTimes(prayerTimes);
       setIsOpen(false);
+      
+      // Save selected mosque for persistence across app restarts
+      try {
+        await tauri.saveSelectedMosque(mosque);
+        console.log('Saved selected mosque to database');
+      } catch (saveErr) {
+        console.error('Failed to save mosque selection:', saveErr);
+      }
     } catch (err) {
       console.error('Failed to load prayer times:', err);
       setError('Failed to load prayer times for this mosque. Please try again or use manual URL entry.');

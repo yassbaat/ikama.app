@@ -29,6 +29,14 @@ export const removeFavoriteMosque = async (mosqueId: string): Promise<void> => {
   return invoke('remove_favorite_mosque', { mosqueId });
 };
 
+export const saveSelectedMosque = async (mosque: Mosque): Promise<void> => {
+  return invoke('save_selected_mosque', { mosque });
+};
+
+export const getSelectedMosque = async (): Promise<Mosque | null> => {
+  return invoke('get_selected_mosque');
+};
+
 export const getMosqueDetails = async (mosqueId: string): Promise<Mosque | null> => {
   return invoke('get_mosque_details', { mosqueId });
 };

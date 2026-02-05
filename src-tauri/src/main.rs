@@ -72,6 +72,8 @@ fn main() {
             commands::get_active_provider,
             commands::get_available_providers,
             commands::test_provider_connection,
+            commands::save_selected_mosque,
+            commands::get_selected_mosque,
             // Prayer commands
             commands::get_next_prayer,
             commands::get_prayer_times,

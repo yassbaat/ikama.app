@@ -251,6 +251,7 @@ impl From<MosqueRow> for Mosque {
 }
 
 #[derive(sqlx::FromRow)]
+#[allow(dead_code)]
 struct PrayerTimesRow {
     mosque_id: String,
     date: String,

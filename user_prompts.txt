@@ -1,0 +1,56 @@
+
+---
+2026-02-06T16:47:30+01:00
+---
+I want you to create a separate
+project folder (called Scraped_mawaqit_API) that fetches data from the Mawaqit website API and exposes my own API for others to access and use and to use it also in this app. (discuss the feasabilty of doing this with lowest cost/free).
+
+use the @countries_available_api.txt file to extract the available countries in the data-data section. loop through all of them ,and extract the country code
+ like "TN" for TUNISIA in this example. <button class="btn btn-default mt-1 country" style="font-weight: normal" data-data="{&quot;nb&quot;:8540,&quot;countr
+y&quot;:&quot;TN&quot;,&quot;coordinates&quot;:{&quot;lat&quot;:28.033886,&quot;lng&quot;:1.659626}}" data--h-bstatus="0OBSERVED">
+                                ALGERIA
+                                <span class="badge" style="font-weight: normal" data--h-bstatus="0OBSERVED">8540</span>
+                            </button>
+
+then get scrape the countries mosques one by one by getting this file to get the mosques details:
+https://mawaqit.net/api/2.0/mosque/map/{country_abreviation}
+so for this example (TUNISIA):
+it is : https://mawaqit.net/api/2.0/mosque/map/TN.
+
+the response should be in this format:
+  {
+    "slug": "jm-lhd-qsyb-sws-4041-tunisia",
+    "name": "جامع الهدى",
+    "image1": "https://cdn.mawaqit.net/images/backend/mosque/857b7441-19cb-4dce-93cb-8e01bcf80287/mosque/1eed4f88-5d3c-6f32-944b-0a7eba2dd6b3.jpeg",
+    "address": "نهج الدريبة",
+    "city": "قصيبة-سوسة",
+    "zipcode": "4041",
+    "countryFullName": "Tunisia",
+    "lng": 10.623162388802,
+    "lat": 35.767664625236
+  },
+
+then after we get the list of all the mosques we get let the users fetch the prayer times of that mosque using this URL format:
+https://mawaqit.net/en/{slug}
+so for the above example:
+https://mawaqit.net/en/jm-lhd-qsyb-sws-4041-tunisia
+
+---
+2026-02-06T17:02:53+01:00
+---
+let's deploy it to vercel and then integrate it with the ikama app
+
+---
+2026-02-06T17:15:20+01:00
+---
+am i in the correct screen?
+
+---
+2026-02-06T17:31:58+01:00
+---
+[Build log with TypeScript errors - see above]
+
+---
+2026-02-06T17:42:11+01:00
+---
+just disabled it!

@@ -9,16 +9,17 @@ import { NightPrayerCard } from './components/NightPrayerCard';
 import { usePrayerTimes } from './hooks/usePrayerTimes';
 import { useStore } from './hooks/useStore';
 import * as tauri from './services/tauri';
+import * as mawaqitApi from './services/mawaqitApi';
 
 function App() {
-  const { 
-    isLoading, 
-    currentMosque, 
-    currentPrayerTimes, 
-    setCurrentMosque, 
-    setCurrentPrayerTimes, 
+  const {
+    isLoading,
+    currentMosque,
+    currentPrayerTimes,
+    setCurrentMosque,
+    setCurrentPrayerTimes,
     setError,
-    selectedDate 
+    selectedDate
   } = useStore();
   usePrayerTimes();
 
@@ -27,22 +28,22 @@ function App() {
     const loadSavedMosque = async () => {
       // Only load if no mosque is currently selected
       if (currentMosque) return;
-      
+
       try {
         console.log('Loading saved mosque...');
         const savedMosque = await tauri.getSelectedMosque();
-        
+
         if (savedMosque) {
           console.log('Found saved mosque:', savedMosque.name);
-          
-          // Load prayer times for the saved mosque
+
+          // Load prayer times for the saved mosque from the Scraper API
           try {
-            const prayerTimes = await tauri.getPrayerTimesForMosque(
-              savedMosque.id, 
-              savedMosque.country || 'FR', 
-              selectedDate
-            );
-            
+            const prayerTimes = await mawaqitApi.getPrayerTimes(savedMosque.id, selectedDate);
+
+            if (!prayerTimes) {
+              throw new Error('Could not fetch prayer times from API');
+            }
+
             setCurrentMosque(savedMosque);
             setCurrentPrayerTimes(prayerTimes);
             console.log('Loaded prayer times for saved mosque');
@@ -72,7 +73,7 @@ function App() {
           {/* Left column - Mosque selector and main countdown */}
           <div className="lg:col-span-2 space-y-6">
             <MosqueSelector />
-            
+
             {currentMosque && !currentPrayerTimes && (
               <div className="glass-card p-6 text-center">
                 <p className="text-yellow-400">
@@ -80,7 +81,7 @@ function App() {
                 </p>
               </div>
             )}
-            
+
             {currentPrayerTimes && (
               <>
                 <NextPrayerCard />
@@ -88,7 +89,7 @@ function App() {
                 <NightPrayerCard />
               </>
             )}
-            
+
             {!currentMosque && (
               <div className="glass-card p-8 text-center">
                 <p className="text-gray-400 mb-2">Welcome to Iqamah!</p>
@@ -105,17 +106,17 @@ function App() {
           {/* Right column - Travel time and additional info */}
           <div className="space-y-6">
             {currentPrayerTimes && <TravelTimeCard />}
-            
+
             {/* Info card */}
             <div className="glass-card p-6">
               <h3 className="text-lg font-semibold mb-4">About</h3>
               <p className="text-sm text-gray-400 leading-relaxed">
-                Iqamah helps you track prayer times and estimate which rak'ah 
+                Iqamah helps you track prayer times and estimate which rak'ah
                 you might catch based on your travel time.
               </p>
               <div className="mt-4 p-3 bg-primary-900/20 border border-primary-500/30 rounded-lg">
                 <p className="text-xs text-primary-400">
-                  <strong>Note:</strong> Rak'ah estimation is approximate. 
+                  <strong>Note:</strong> Rak'ah estimation is approximate.
                   Always hurry to the mosque—you may still catch the prayer!
                 </p>
               </div>

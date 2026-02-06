@@ -95,7 +95,7 @@ impl PrayerEngine {
         let total_rakah = prayer.get_rakah_count(&self.config.default_rakah_counts);
         let estimated_duration = Duration::seconds(total_rakah as i64 * self.config.rakah_duration_seconds);
         let prayer_end = prayer_start + estimated_duration;
-        let grace_end = prayer_end + Duration::seconds(self.config.grace_seconds);
+        let _grace_end = prayer_end + Duration::seconds(self.config.grace_seconds);
         let post_prayer_window = prayer_end + Duration::minutes(self.config.post_prayer_display_minutes);
 
         // Not started yet

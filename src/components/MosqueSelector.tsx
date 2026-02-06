@@ -2,8 +2,10 @@ import { useState, useEffect } from 'react';
 import { useStore } from '../hooks/useStore';
 import { useFavoriteMosques } from '../hooks/usePrayerTimes';
 import * as tauri from '../services/tauri';
+import * as mawaqitApi from '../services/mawaqitApi';
 import { Search, MapPin, Star, Plus, X, Check, Globe, Link2 } from 'lucide-react';
 import type { Mosque, ProviderInfo } from '../types';
+import type { Country as ApiCountry } from '../services/mawaqitApi';
 
 const COUNTRIES = [
   { code: 'FR', name: 'France', flag: '🇫🇷' },
@@ -25,7 +27,9 @@ export const MosqueSelector = () => {
   const [activeProvider, setActiveProvider] = useState<ProviderInfo | null>(null);
   const [searchError, setSearchError] = useState<string | null>(null);
   const [selectedCountry, setSelectedCountry] = useState('FR');
-  
+  const [apiCountries, setApiCountries] = useState<ApiCountry[]>([]);
+  const [isLoadingCountries, setIsLoadingCountries] = useState(false);
+
   // Manual URL entry
   const [showManualEntry, setShowManualEntry] = useState(false);
   const [manualUrl, setManualUrl] = useState('');
@@ -37,27 +41,39 @@ export const MosqueSelector = () => {
     }).catch(() => {
       setActiveProvider(null);
     });
+
+    // Fetch countries from Scraper API
+    setIsLoadingCountries(true);
+    mawaqitApi.getCountries().then((countries) => {
+      if (countries && countries.length > 0) {
+        setApiCountries(countries);
+      }
+    }).finally(() => {
+      setIsLoadingCountries(false);
+    });
   }, []);
 
   const handleSearch = async () => {
-    if (!searchQuery.trim()) return;
+    if (!searchQuery.trim()) return; // Don't search if query is empty
 
-    setIsSearching(true);
-    setSearchError(null);
-    clearError();
-    
+    setIsSearching(true); // Start loading state
+    setSearchError(null); // Clear previous errors
+    clearError(); // Clear global errors
+
     try {
-      const results = await tauri.searchMosques(searchQuery, selectedCountry);
-      setSearchResults(results.mosques);
-      
-      if (results.mosques.length === 0) {
-        setSearchError(`No mosques found in ${COUNTRIES.find(c => c.code === selectedCountry)?.name}. Try another country or enter URL manually.`);
+      // Use the new Scraped Mawaqit API for searching
+      const results = await mawaqitApi.searchMosques(selectedCountry, searchQuery);
+      setSearchResults(results); // Update UI with results
+
+      if (results.length === 0) {
+        // Show user-friendly error if no results found
+        setSearchError(`No mosques found in ${selectedCountry}. Try another country or enter URL manually.`);
       }
     } catch (err) {
       console.error('Search failed:', err);
       setSearchError('Search failed. Please try again.');
     } finally {
-      setIsSearching(false);
+      setIsSearching(false); // End loading state
     }
   };
 
@@ -65,13 +81,13 @@ export const MosqueSelector = () => {
     // Handle various Mawaqit URL formats
     // https://mawaqit.net/en/jamii-lqsiba-benzrt-7000-tunisia
     // https://mawaqit.net/fr/mosquee-name-1234-france
-    
+
     try {
       const urlObj = new URL(url);
       if (!urlObj.hostname.includes('mawaqit.net')) {
         return null;
       }
-      
+
       const pathParts = urlObj.pathname.split('/').filter(Boolean);
       // Should be at least 2 parts: language and slug
       if (pathParts.length >= 2) {
@@ -89,25 +105,25 @@ export const MosqueSelector = () => {
 
   const handleManualUrlSubmit = async () => {
     if (!manualUrl.trim()) return;
-    
+
     setIsLoadingPrayerTimes(true);
     setSearchError(null);
     clearError();
-    
+
     try {
       const slug = extractSlugFromUrl(manualUrl);
-      
+
       if (!slug) {
         setSearchError('Invalid Mawaqit URL. Please use format: https://mawaqit.net/en/mosque-name-id-country');
         setIsLoadingPrayerTimes(false);
         return;
       }
-      
+
       console.log('Fetching prayer times for slug:', slug, 'on date:', selectedDate);
-      
-      // Try to get prayer times
-      const prayerTimes = await tauri.getPrayerTimesForMosque(slug, selectedCountry, selectedDate);
-      
+
+      // Try to get prayer times from Scraper API
+      const prayerTimes = await mawaqitApi.getPrayerTimes(slug, selectedDate);
+
       if (prayerTimes) {
         // Create mosque object from prayer times
         const mosque: Mosque = {
@@ -118,16 +134,16 @@ export const MosqueSelector = () => {
           country: undefined,
           is_favorite: false,
         };
-        
+
         setCurrentMosque(mosque);
         setCurrentPrayerTimes(prayerTimes);
         setIsOpen(false);
         setShowManualEntry(false);
         setManualUrl('');
-        
+
         // Add to favorites automatically
         await addFavorite(mosque);
-        
+
         // Save selected mosque for persistence
         try {
           await tauri.saveSelectedMosque(mosque);
@@ -146,19 +162,24 @@ export const MosqueSelector = () => {
   };
 
   const handleSelectMosque = async (mosque: Mosque) => {
-    setIsLoadingPrayerTimes(true);
-    clearError();
-    
+    setIsLoadingPrayerTimes(true); // Start loading state
+    clearError(); // Clear global errors
+
     try {
       console.log('Loading prayer times for mosque:', mosque.id, 'on date:', selectedDate);
-      
-      const prayerTimes = await tauri.getPrayerTimesForMosque(mosque.id, selectedCountry, selectedDate);
-      
-      setCurrentMosque(mosque);
-      setCurrentPrayerTimes(prayerTimes);
-      setIsOpen(false);
-      
-      // Save selected mosque for persistence across app restarts
+
+      // Use the new Scraped Mawaqit API for fetching times
+      const prayerTimes = await mawaqitApi.getPrayerTimes(mosque.id, selectedDate);
+
+      if (!prayerTimes) {
+        throw new Error('No prayer times returned');
+      }
+
+      setCurrentMosque(mosque); // Set active mosque in state
+      setCurrentPrayerTimes(prayerTimes); // Set prayer times in state
+      setIsOpen(false); // Close dropdown
+
+      // Sync with local database for persistence
       try {
         await tauri.saveSelectedMosque(mosque);
         console.log('Saved selected mosque to database');
@@ -169,7 +190,7 @@ export const MosqueSelector = () => {
       console.error('Failed to load prayer times:', err);
       setError('Failed to load prayer times for this mosque. Please try again or use manual URL entry.');
     } finally {
-      setIsLoadingPrayerTimes(false);
+      setIsLoadingPrayerTimes(false); // End loading state
     }
   };
 
@@ -177,7 +198,7 @@ export const MosqueSelector = () => {
     return favoriteMosques.some((m) => m.id === mosqueId);
   };
 
-  const selectedCountryName = COUNTRIES.find(c => c.code === selectedCountry);
+
 
   return (
     <div className="relative">
@@ -232,15 +253,17 @@ export const MosqueSelector = () => {
                 value={selectedCountry}
                 onChange={(e) => setSelectedCountry(e.target.value)}
                 className="bg-gray-800 border border-gray-700 rounded px-2 py-1 text-sm text-white"
+                disabled={isLoadingCountries}
               >
-                {COUNTRIES.map((country) => (
+                {/* Show static list if API list hasn't loaded yet */}
+                {(apiCountries.length > 0 ? apiCountries : COUNTRIES).map((country) => (
                   <option key={country.code} value={country.code}>
-                    {country.flag} {country.name}
+                    {'flag' in country ? country.flag : '📍'} {country.name}
                   </option>
                 ))}
               </select>
               <span className="text-xs text-gray-400">
-                {selectedCountryName?.flag} {selectedCountryName?.name}
+                {isLoadingCountries ? 'Loading countries...' : `${apiCountries.length || COUNTRIES.length} countries supported`}
               </span>
             </div>
           </div>
@@ -254,7 +277,7 @@ export const MosqueSelector = () => {
               <Link2 className="w-4 h-4" />
               {showManualEntry ? 'Hide manual URL entry' : 'Add mosque by Mawaqit URL'}
             </button>
-            
+
             {showManualEntry && (
               <div className="mt-3 space-y-2">
                 <p className="text-xs text-gray-400">
@@ -303,7 +326,7 @@ export const MosqueSelector = () => {
                 {isSearching ? '...' : 'Search'}
               </button>
             </div>
-            
+
             {/* Search error */}
             {searchError && (
               <p className="text-xs text-red-400 mt-2">{searchError}</p>
@@ -365,11 +388,10 @@ export const MosqueSelector = () => {
               favoriteMosques.map((mosque) => (
                 <div
                   key={mosque.id}
-                  className={`flex items-center gap-2 p-2 rounded-lg cursor-pointer transition-colors ${
-                    currentMosque?.id === mosque.id
-                      ? 'bg-primary-900/30 border border-primary-500/30'
-                      : 'hover:bg-gray-800/50'
-                  }`}
+                  className={`flex items-center gap-2 p-2 rounded-lg cursor-pointer transition-colors ${currentMosque?.id === mosque.id
+                    ? 'bg-primary-900/30 border border-primary-500/30'
+                    : 'hover:bg-gray-800/50'
+                    }`}
                 >
                   <button
                     onClick={() => handleSelectMosque(mosque)}

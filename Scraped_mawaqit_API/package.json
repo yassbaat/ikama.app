@@ -1,0 +1,22 @@
+{
+    "name": "scraped-mawaqit-api",
+    "version": "1.0.0",
+    "description": "API that scrapes Mawaqit mosque data and exposes prayer times",
+    "scripts": {
+        "dev": "vercel dev",
+        "build": "echo 'Vercel will handle the build'",
+        "test": "vitest",
+        "parse-countries": "npx ts-node scripts/parse-countries.ts",
+        "scrape-mosques": "npx ts-node scripts/scrape-mosques.ts"
+    },
+    "dependencies": {
+        "cheerio": "^1.0.0-rc.12"
+    },
+    "devDependencies": {
+        "@types/node": "^20.0.0",
+        "@vercel/node": "^3.0.0",
+        "ts-node": "^10.9.0",
+        "typescript": "^5.0.0",
+        "vitest": "^1.0.0"
+    }
+}

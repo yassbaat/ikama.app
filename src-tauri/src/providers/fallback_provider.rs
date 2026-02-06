@@ -1,5 +1,5 @@
 use async_trait::async_trait;
-use chrono::{NaiveDate, Utc};
+use chrono::NaiveDate;
 use serde_json::Value;
 
 use crate::models::*;

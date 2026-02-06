@@ -1,0 +1,12 @@
+# Ignore parent project files
+../
+node_modules/
+.git/
+*.md
+scripts/
+data/
+lib/
+*.json
+!vercel.json
+!package.json
+!tsconfig.json

@@ -49,11 +49,15 @@ export async function fetchPrayerTimes(slug: string): Promise<PrayerTimes> {
             }
         });
 
+        console.log(`Mawaqit Response for ${slug}: status=${response.status}`);
+
         if (!response.ok) {
+            console.error(`Mawaqit Error Response Body: ${await response.text()}`);
             throw new Error(`Failed to fetch mosque page: ${response.status} ${response.statusText}`);
         }
 
         const html = await response.text();
+        console.log(`HTML length: ${html.length}. First 200 chars: ${html.substring(0, 200)}`);
 
         // Extract confData from the page
         const confData = extractConfData(html);

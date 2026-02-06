@@ -40,4 +40,4 @@ Prayer times app with live countdown, rak'ah estimation, and Tahajjud calculator
 
 ---
 
-**Full Changelog**: https://github.com/yassbaat/ikama.app/commits/main
+**Full Changelog**: https://github.com/yassbaat/iqamah.com/commits/main

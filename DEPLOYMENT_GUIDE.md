@@ -3,7 +3,7 @@
 ## 🚀 Creating a Release (3 Methods)
 
 ### Method 1: Manual (One-time)
-1. Go to https://github.com/yassbaat/ikama.app/releases
+1. Go to https://github.com/yassbaat/iqamah.com/releases
 2. Click "Draft a new release"
 3. Create tag: `v1.0.0`
 4. Upload files from `src-tauri/target/release/bundle/`
@@ -53,7 +53,7 @@ git push origin v1.0.0
 1. Create `index.html` in root of repo
 2. Go to Settings → Pages
 3. Source: Deploy from branch → `main` → `/ (root)`
-4. Your site is live at: `https://yassbaat.github.io/ikamah.app/`
+4. Your site is live at: `https://yassbaat.github.io/iqamah.com/`
 
 ### Custom Domain (Optional)
 1. Buy domain (Namecheap ~$10/year)
@@ -103,18 +103,18 @@ After release, these URLs work:
 
 **Latest Release Page:**
 ```
-https://github.com/yassbaat/ikama.app/releases/latest
+https://github.com/yassbaat/iqamah.com/releases/latest
 ```
 
 **Specific File (example):**
 ```
-https://github.com/yassbaat/ikama.app/releases/download/v1.0.0/iqamah_1.0.0_x64-setup.exe
+https://github.com/yassbaat/iqamah.com/releases/download/v1.0.0/iqamah_1.0.0_x64-setup.exe
 ```
 
 **Badge for README:**
 ```markdown
-![Version](https://img.shields.io/github/v/release/yassbaat/ikama.app)
-![Downloads](https://img.shields.io/github/downloads/yassbaat/ikama.app/total)
+![Version](https://img.shields.io/github/v/release/yassbaat/iqamah.com)
+![Downloads](https://img.shields.io/github/downloads/yassbaat/iqamah.com/total)
 ```
 
 ---

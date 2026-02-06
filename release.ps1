@@ -44,4 +44,4 @@ gh release create $tag `
     $msiPath
 
 Write-Host "✅ Release created successfully!" -ForegroundColor Green
-Write-Host "URL: https://github.com/yassbaat/ikama.app/releases/tag/$tag"
+Write-Host "URL: https://github.com/yassbaat/iqamah.com/releases/tag/$tag"

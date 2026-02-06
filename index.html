@@ -1,13 +1,384 @@
-<!doctype html>
-<html lang="en" class="dark">
-  <head>
-    <meta charset="UTF-8" />
-    <link rel="icon" type="image/svg+xml" href="/vite.svg" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Iqamah - Prayer Times</title>
-  </head>
-  <body class="bg-gray-900 text-white">
-    <div id="root"></div>
-    <script type="module" src="/src/main.tsx"></script>
-  </body>
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Iqamah - Prayer Times App</title>
+  <meta name="description" content="Track prayer times, estimate rak'ahs, and never miss a prayer with Iqamah">
+  
+  <!-- Open Graph / Social Media -->
+  <meta property="og:type" content="website">
+  <meta property="og:title" content="Iqamah - Prayer Times App">
+  <meta property="og:description" content="Live prayer countdown with rak'ah estimation and Tahajjud calculator">
+  <meta property="og:url" content="https://yassbaat.github.io/ikamah.app/">
+  
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+    
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+      background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
+      color: #f8fafc;
+      min-height: 100vh;
+      line-height: 1.6;
+    }
+    
+    .container {
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 0 20px;
+    }
+    
+    /* Hero Section */
+    .hero {
+      text-align: center;
+      padding: 80px 20px;
+    }
+    
+    .hero h1 {
+      font-size: 4rem;
+      margin-bottom: 20px;
+      background: linear-gradient(135deg, #10b981 0%, #34d399 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+    
+    .hero p {
+      font-size: 1.25rem;
+      color: #94a3b8;
+      max-width: 600px;
+      margin: 0 auto 40px;
+    }
+    
+    .download-btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 12px;
+      background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+      color: white;
+      padding: 18px 40px;
+      border-radius: 12px;
+      text-decoration: none;
+      font-size: 1.2rem;
+      font-weight: 600;
+      transition: all 0.3s ease;
+      box-shadow: 0 10px 40px rgba(16, 185, 129, 0.3);
+    }
+    
+    .download-btn:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 15px 50px rgba(16, 185, 129, 0.4);
+    }
+    
+    .download-btn svg {
+      width: 24px;
+      height: 24px;
+    }
+    
+    .version-badge {
+      display: inline-block;
+      background: rgba(255,255,255,0.1);
+      padding: 8px 16px;
+      border-radius: 20px;
+      font-size: 0.9rem;
+      color: #94a3b8;
+      margin-top: 20px;
+    }
+    
+    /* Features */
+    .features {
+      padding: 60px 20px;
+      background: rgba(15, 23, 42, 0.5);
+    }
+    
+    .features h2 {
+      text-align: center;
+      font-size: 2.5rem;
+      margin-bottom: 60px;
+    }
+    
+    .feature-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+      gap: 30px;
+    }
+    
+    .feature-card {
+      background: rgba(255, 255, 255, 0.05);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      border-radius: 16px;
+      padding: 30px;
+      transition: all 0.3s ease;
+    }
+    
+    .feature-card:hover {
+      background: rgba(255, 255, 255, 0.08);
+      transform: translateY(-5px);
+    }
+    
+    .feature-icon {
+      font-size: 2.5rem;
+      margin-bottom: 20px;
+    }
+    
+    .feature-card h3 {
+      font-size: 1.3rem;
+      margin-bottom: 12px;
+      color: #10b981;
+    }
+    
+    .feature-card p {
+      color: #94a3b8;
+    }
+    
+    /* Downloads Section */
+    .downloads {
+      padding: 80px 20px;
+      text-align: center;
+    }
+    
+    .downloads h2 {
+      font-size: 2.5rem;
+      margin-bottom: 40px;
+    }
+    
+    .download-grid {
+      display: flex;
+      justify-content: center;
+      gap: 20px;
+      flex-wrap: wrap;
+    }
+    
+    .download-card {
+      background: rgba(255, 255, 255, 0.05);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      border-radius: 16px;
+      padding: 30px;
+      width: 280px;
+      transition: all 0.3s ease;
+    }
+    
+    .download-card:hover {
+      border-color: #10b981;
+    }
+    
+    .download-card .platform {
+      font-size: 1.2rem;
+      font-weight: 600;
+      margin-bottom: 10px;
+    }
+    
+    .download-card .format {
+      color: #64748b;
+      font-size: 0.9rem;
+      margin-bottom: 20px;
+    }
+    
+    .download-card .btn-secondary {
+      display: block;
+      background: rgba(16, 185, 129, 0.2);
+      color: #10b981;
+      padding: 12px 24px;
+      border-radius: 8px;
+      text-decoration: none;
+      font-weight: 500;
+      transition: all 0.3s ease;
+    }
+    
+    .download-card .btn-secondary:hover {
+      background: rgba(16, 185, 129, 0.3);
+    }
+    
+    .download-card.coming-soon {
+      opacity: 0.5;
+    }
+    
+    .download-card.coming-soon .btn-secondary {
+      background: rgba(100, 116, 139, 0.2);
+      color: #64748b;
+      cursor: not-allowed;
+    }
+    
+    /* Footer */
+    footer {
+      padding: 40px 20px;
+      text-align: center;
+      border-top: 1px solid rgba(255, 255, 255, 0.1);
+      color: #64748b;
+    }
+    
+    footer a {
+      color: #10b981;
+      text-decoration: none;
+    }
+    
+    footer a:hover {
+      text-decoration: underline;
+    }
+    
+    /* Responsive */
+    @media (max-width: 768px) {
+      .hero h1 {
+        font-size: 2.5rem;
+      }
+      
+      .hero p {
+        font-size: 1rem;
+      }
+      
+      .download-grid {
+        flex-direction: column;
+        align-items: center;
+      }
+    }
+  </style>
+</head>
+<body>
+  <!-- Hero -->
+  <section class="hero">
+    <div class="container">
+      <h1>🕌 Iqamah</h1>
+      <p>Track prayer times with live countdown, estimate which rak'ah is ongoing, and never miss the blessed Tahajjud time.</p>
+      
+      <a href="https://github.com/yassbaat/ikama.app/releases/latest/download/iqamah_1.0.0_x64-setup.exe" class="download-btn">
+        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+        </svg>
+        Download for Windows
+      </a>
+      
+      <div class="version-badge">Version 1.0.0 • Free & Open Source</div>
+    </div>
+  </section>
+  
+  <!-- Features -->
+  <section class="features">
+    <div class="container">
+      <h2>Features</h2>
+      
+      <div class="feature-grid">
+        <div class="feature-card">
+          <div class="feature-icon">⏱️</div>
+          <h3>Live Countdown</h3>
+          <p>Real-time countdown to adhan and iqama times. Know exactly when the next prayer starts.</p>
+        </div>
+        
+        <div class="feature-card">
+          <div class="feature-icon">🎯</div>
+          <h3>Rak'ah Estimation</h3>
+          <p>Know which rak'ah is currently ongoing based on iqama time. Plan your arrival accordingly.</p>
+        </div>
+        
+        <div class="feature-card">
+          <div class="feature-icon">🌙</div>
+          <h3>Tahajjud Calculator</h3>
+          <p>Automatically calculates the last third of the night - the best time for night prayer.</p>
+        </div>
+        
+        <div class="feature-card">
+          <div class="feature-icon">🚗</div>
+          <h3>Travel Time Planner</h3>
+          <p>Calculate when to leave based on your travel time and see which rak'ah you'll catch.</p>
+        </div>
+        
+        <div class="feature-card">
+          <div class="feature-icon">💾</div>
+          <h3>Works Offline</h3>
+          <p>Prayer times are cached locally. No internet needed after first setup.</p>
+        </div>
+        
+        <div class="feature-card">
+          <div class="feature-icon">🌍</div>
+          <h3>Mosque Search</h3>
+          <p>Search mosques worldwide or add by Mawaqit URL. Supports multiple countries.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+  
+  <!-- Downloads -->
+  <section class="downloads">
+    <div class="container">
+      <h2>Download</h2>
+      
+      <div class="download-grid">
+        <div class="download-card">
+          <div class="platform">🪟 Windows</div>
+          <div class="format">Setup.exe (Recommended)</div>
+          <a href="https://github.com/yassbaat/ikama.app/releases/latest/download/iqamah_1.0.0_x64-setup.exe" class="btn-secondary">
+            Download
+          </a>
+        </div>
+        
+        <div class="download-card">
+          <div class="platform">🪟 Windows</div>
+          <div class="format">MSI Installer</div>
+          <a href="https://github.com/yassbaat/ikama.app/releases/latest/download/iqamah_1.0.0_x64_en-US.msi" class="btn-secondary">
+            Download
+          </a>
+        </div>
+        
+        <div class="download-card coming-soon">
+          <div class="platform">🍎 macOS</div>
+          <div class="format">Coming Soon</div>
+          <a href="#" class="btn-secondary">Soon</a>
+        </div>
+        
+        <div class="download-card coming-soon">
+          <div class="platform">🐧 Linux</div>
+          <div class="format">Coming Soon</div>
+          <a href="#" class="btn-secondary">Soon</a>
+        </div>
+      </div>
+    </div>
+  </section>
+  
+  <!-- Footer -->
+  <footer>
+    <div class="container">
+      <p>
+        Made with ❤️ • 
+        <a href="https://github.com/yassbaat/ikama.app">GitHub</a> • 
+        <a href="https://github.com/yassbaat/ikama.app/releases">Releases</a> • 
+        <a href="https://github.com/yassbaat/ikama.app/issues">Report Issue</a>
+      </p>
+      <p style="margin-top: 10px; font-size: 0.9rem;">
+        Built with Tauri + React + Rust
+      </p>
+    </div>
+  </footer>
+  
+  <!-- GitHub Corner -->
+  <a href="https://github.com/yassbaat/ikama.app" class="github-corner" aria-label="View source on GitHub">
+    <svg width="80" height="80" viewBox="0 0 250 250" style="fill:#10b981; color:#0f172a; position: absolute; top: 0; border: 0; right: 0;" aria-hidden="true">
+      <path d="M0,0 L115,115 L130,115 L142,142 L250,250 L250,0 Z"></path>
+      <path d="M128.3,109.0 C113.8,99.7 119.0,89.6 119.0,89.6 C122.0,82.7 120.5,78.6 120.5,78.6 C119.2,72.0 123.4,76.3 123.4,76.3 C127.3,80.9 125.5,87.3 125.5,87.3 C122.9,97.6 130.6,101.9 134.4,103.2" fill="currentColor" style="transform-origin: 130px 106px;" class="octo-arm"></path>
+      <path d="M115.0,115.0 C114.9,115.1 118.7,116.5 119.8,115.4 L133.7,101.6 C136.5,99.2 139.3,97.0 143.2,95.8 C148.1,94.3 153.7,94.5 158.1,92.4 C162.5,90.3 166.1,86.9 168.5,82.6 C170.9,78.3 171.4,74.3 171.4,74.3 C171.4,74.3 168.9,75.2 165.0,77.5 C161.1,79.8 157.5,82.8 153.6,84.9 C149.7,87.0 145.4,87.8 141.7,88.0 C138.0,88.2 134.9,87.3 132.3,85.7 C129.7,84.1 127.9,81.9 126.3,79.4 C124.7,76.9 123.5,74.1 122.7,71.2 C121.9,68.3 121.6,65.4 121.6,62.7 C121.6,57.3 123.3,52.5 126.4,48.5 C129.5,44.5 134.0,41.7 139.3,40.5 C144.6,39.3 150.3,39.8 155.2,42.1 C160.1,44.4 164.0,48.4 166.3,53.4 C167.3,55.7 167.9,58.1 168.1,60.5" fill="currentColor" class="octo-body"></path>
+    </svg>
+  </a>
+  
+  <style>
+    .github-corner:hover .octo-arm {
+      animation: octocat-wave 560ms ease-in-out;
+    }
+    @keyframes octocat-wave {
+      0%, 100% { transform: rotate(0); }
+      20%, 60% { transform: rotate(-25deg); }
+      40%, 80% { transform: rotate(10deg); }
+    }
+    @media (max-width: 500px) {
+      .github-corner:hover .octo-arm {
+        animation: none;
+      }
+      .github-corner .octo-arm {
+        animation: octocat-wave 560ms ease-in-out;
+      }
+    }
+  </style>
+</body>
 </html>

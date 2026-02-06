@@ -60,8 +60,8 @@
       transition: all 0.3s ease;
     }
     .download-btn-secondary:hover { background: rgba(255, 255, 255, 0.12); border-color: rgba(255, 255, 255, 0.25); }
-    .coming-soon-section { margin-top: 40px; padding-top: 30px; border-top: 1px solid rgba(255, 255, 255, 0.1); }
-    .coming-soon-section h3 { font-size: 1rem; color: #64748b; margin-bottom: 15px; font-weight: 500; }
+    .all-platforms { margin-top: 40px; padding-top: 30px; border-top: 1px solid rgba(255, 255, 255, 0.1); }
+    .all-platforms h3 { font-size: 1rem; color: #64748b; margin-bottom: 15px; font-weight: 500; }
     .platform-grid { display: flex; justify-content: center; gap: 15px; flex-wrap: wrap; }
     .platform-card {
       background: rgba(255, 255, 255, 0.05);
@@ -73,7 +73,6 @@
       min-width: 120px;
     }
     .platform-card:hover { background: rgba(255, 255, 255, 0.08); transform: translateY(-2px); }
-    .platform-card.coming-soon { opacity: 0.5; }
     .platform-card .platform-icon { font-size: 1.8rem; margin-bottom: 5px; }
     .platform-card .platform-name { font-size: 0.85rem; color: #94a3b8; margin-bottom: 8px; }
     .platform-card .platform-link {
@@ -83,7 +82,6 @@
       font-weight: 500;
     }
     .platform-card .platform-link:hover { text-decoration: underline; }
-    .platform-card .platform-status { font-size: 0.8rem; color: #64748b; }
     .version-badge {
       display: inline-block;
       background: rgba(255,255,255,0.1);
@@ -133,33 +131,36 @@
       <p>Track prayer times with live countdown, estimate which rak'ah is ongoing, and never miss the blessed Tahajjud time.</p>
       
       <div id="downloadSection">
-        <!-- Windows Download -->
-        <a href="https://github.com/yassbaat/ikama.app/releases/latest/download/iqamah_1.0.0_x64-setup.exe" class="download-btn-primary">
-          <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" style="width:28px;height:28px;">
+        <!-- Dynamic download button based on OS -->
+        <a href="https://github.com/yassbaat/ikama.app/releases/latest/download/iqamah_1.0.0_x64-setup.exe" class="download-btn-primary" id="primaryDownload">
+          <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
           </svg>
-          Download for Windows
+          <span id="downloadText">Download for Windows</span>
         </a>
-        <div class="download-meta">Recommended • Portable Installer • ~4 MB</div>
+        <div class="download-meta" id="downloadMeta">Recommended • Portable Installer • ~4 MB</div>
         
-        <div class="secondary-downloads">
+        <div class="secondary-downloads" id="secondaryDownloads">
           <a href="https://github.com/yassbaat/ikama.app/releases/latest/download/iqamah_1.0.0_x64_en-US.msi" class="download-btn-secondary">
             🪟 Download MSI (Enterprise)
           </a>
         </div>
         
-        <div class="coming-soon-section">
-          <h3>Coming Soon</h3>
+        <div class="all-platforms">
+          <h3>Also available for</h3>
           <div class="platform-grid">
-            <div class="platform-card coming-soon">
+            <div class="platform-card">
               <div class="platform-icon">🍎</div>
               <div class="platform-name">macOS</div>
-              <span class="platform-status">Building...</span>
+              <a href="https://github.com/yassbaat/ikama.app/releases/latest/download/iqamah_1.0.0_aarch64.dmg" class="platform-link">Download DMG</a>
             </div>
-            <div class="platform-card coming-soon">
+            <div class="platform-card">
               <div class="platform-icon">🐧</div>
               <div class="platform-name">Linux</div>
-              <span class="platform-status">Building...</span>
+              <div>
+                <a href="https://github.com/yassbaat/ikama.app/releases/latest/download/iqamah_1.0.0_amd64.deb" class="platform-link">Deb</a> •
+                <a href="https://github.com/yassbaat/ikama.app/releases/latest/download/iqamah_1.0.0_amd64.AppImage" class="platform-link">AppImage</a>
+              </div>
             </div>
           </div>
         </div>
@@ -218,5 +219,34 @@
       <p style="margin-top: 10px; font-size: 0.9rem;">Built with Tauri + React + Rust</p>
     </div>
   </footer>
+  
+  <script>
+    // OS Detection
+    const userAgent = navigator.userAgent;
+    let os = 'windows';
+    if (userAgent.indexOf('Mac') !== -1) os = 'macos';
+    else if (userAgent.indexOf('Linux') !== -1) os = 'linux';
+    
+    const primaryDownload = document.getElementById('primaryDownload');
+    const downloadText = document.getElementById('downloadText');
+    const downloadMeta = document.getElementById('downloadMeta');
+    const secondaryDownloads = document.getElementById('secondaryDownloads');
+    
+    if (os === 'macos') {
+      primaryDownload.href = 'https://github.com/yassbaat/ikama.app/releases/latest/download/iqamah_1.0.0_aarch64.dmg';
+      downloadText.textContent = 'Download for macOS';
+      downloadMeta.textContent = 'Apple Silicon • DMG Installer • ~5 MB';
+      secondaryDownloads.innerHTML = '';
+    } else if (os === 'linux') {
+      primaryDownload.href = 'https://github.com/yassbaat/ikama.app/releases/latest/download/iqamah_1.0.0_amd64.AppImage';
+      downloadText.textContent = 'Download for Linux';
+      downloadMeta.textContent = 'AppImage • Portable • ~15 MB';
+      secondaryDownloads.innerHTML = `
+        <a href="https://github.com/yassbaat/ikama.app/releases/latest/download/iqamah_1.0.0_amd64.deb" class="download-btn-secondary">
+          🐧 Download .deb (Debian/Ubuntu)
+        </a>
+      `;
+    }
+  </script>
 </body>
 </html>

@@ -1,2 +1,5 @@
 - [2026-02-06] Started Mawaqit Scraper API project planning
 - [2026-02-06] Completed Scraped_mawaqit_API project - 159 countries, mosque/prayer times endpoints
+- [2026-02-06] Deployed Scraper API to Vercel (https://mawaqit-prayer-api.vercel.app)
+- [2026-02-06] Fixed Vercel routing and TS errors
+- [2026-02-06] Integrated API into MosqueSelector and App components

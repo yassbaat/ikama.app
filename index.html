@@ -485,35 +485,35 @@
         </div>
         
         <!-- macOS -->
-        <div class="download-row coming-soon">
+        <div class="download-row">
           <div class="os-icon">🍎</div>
           <div class="os-info">
             <div class="os-name">macOS</div>
-            <div class="os-type">Disk Image (.dmg)</div>
+            <div class="os-type">Disk Image (.dmg) • Intel & Apple Silicon</div>
           </div>
-          <span class="badge">Soon</span>
-          <a href="#" class="btn-small">Soon</a>
+          <span class="badge">Available</span>
+          <a href="https://github.com/yassbaat/ikama.app/releases/latest/download/iqamah_1.0.0_x64.dmg" class="btn-small">Download</a>
         </div>
         
         <!-- Linux -->
-        <div class="download-row coming-soon">
+        <div class="download-row">
           <div class="os-icon">🐧</div>
           <div class="os-info">
             <div class="os-name">Linux</div>
-            <div class="os-type">Debian Package (.deb)</div>
+            <div class="os-type">Debian Package (.deb) • Ubuntu/Debian</div>
           </div>
-          <span class="badge">Soon</span>
-          <a href="#" class="btn-small">Soon</a>
+          <span class="badge">Available</span>
+          <a href="https://github.com/yassbaat/ikama.app/releases/latest/download/iqamah_1.0.0_amd64.deb" class="btn-small">Download</a>
         </div>
         
-        <div class="download-row coming-soon">
+        <div class="download-row">
           <div class="os-icon">🐧</div>
           <div class="os-info">
             <div class="os-name">Linux</div>
-            <div class="os-type">AppImage (.AppImage)</div>
+            <div class="os-type">AppImage (.AppImage) • Universal</div>
           </div>
-          <span class="badge">Soon</span>
-          <a href="#" class="btn-small">Soon</a>
+          <span class="badge">Available</span>
+          <a href="https://github.com/yassbaat/ikama.app/releases/latest/download/iqamah_1.0.0_amd64.AppImage" class="btn-small">Download</a>
         </div>
       </div>
     </div>
@@ -593,27 +593,29 @@
           <div class="other-platforms">
             <h3>Also available for</h3>
             <div class="platform-grid">
-              <div class="platform-card coming-soon">
+              <div class="platform-card">
                 <div class="platform-icon">🍎</div>
                 <div class="platform-name">macOS</div>
-                <span class="platform-link">Coming Soon</span>
+                <a href="${baseUrl}iqamah_1.0.0_x64.dmg" class="platform-link">Download →</a>
               </div>
-              <div class="platform-card coming-soon">
+              <div class="platform-card">
                 <div class="platform-icon">🐧</div>
                 <div class="platform-name">Linux</div>
-                <span class="platform-link">Coming Soon</span>
+                <a href="${baseUrl}iqamah_1.0.0_amd64.deb" class="platform-link">Download →</a>
               </div>
             </div>
           </div>
         `;
       } else if (os === "macOS") {
-        // macOS user - show coming soon as primary
+        // macOS user - show DMG as primary
         primaryButton = `
-          <div style="padding: 20px; background: rgba(255,255,255,0.05); border-radius: 14px; max-width: 500px; margin: 0 auto;">
-            <div style="font-size: 1.3rem; font-weight: 600; margin-bottom: 10px;">🍎 macOS Version Coming Soon</div>
-            <div style="color: #94a3b8; margin-bottom: 15px;">We're working on the macOS version. Check back soon!</div>
-            <a href="https://github.com/yassbaat/ikama.app/releases" style="color: #10b981; text-decoration: none;">View All Releases →</a>
-          </div>
+          <a href="${baseUrl}iqamah_1.0.0_x64.dmg" class="download-btn-primary">
+            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+            </svg>
+            Download for macOS
+          </a>
+          <div class="download-meta">Disk Image (.dmg) • Intel & Apple Silicon</div>
         `;
         
         otherPlatforms = `
@@ -625,21 +627,31 @@
                 <div class="platform-name">Windows</div>
                 <a href="${baseUrl}iqamah_1.0.0_x64-setup.exe" class="platform-link">Download →</a>
               </div>
-              <div class="platform-card coming-soon">
+              <div class="platform-card">
                 <div class="platform-icon">🐧</div>
                 <div class="platform-name">Linux</div>
-                <span class="platform-link">Coming Soon</span>
+                <a href="${baseUrl}iqamah_1.0.0_amd64.deb" class="platform-link">Download →</a>
               </div>
             </div>
           </div>
         `;
       } else if (os === "Linux") {
-        // Linux user
+        // Linux user - show DEB as primary
         primaryButton = `
-          <div style="padding: 20px; background: rgba(255,255,255,0.05); border-radius: 14px; max-width: 500px; margin: 0 auto;">
-            <div style="font-size: 1.3rem; font-weight: 600; margin-bottom: 10px;">🐧 Linux Version Coming Soon</div>
-            <div style="color: #94a3b8; margin-bottom: 15px;">We're working on the Linux version. Check back soon!</div>
-            <a href="https://github.com/yassbaat/ikama.app/releases" style="color: #10b981; text-decoration: none;">View All Releases →</a>
+          <a href="${baseUrl}iqamah_1.0.0_amd64.deb" class="download-btn-primary">
+            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+            </svg>
+            Download for Linux
+          </a>
+          <div class="download-meta">Debian Package (.deb) • Ubuntu/Debian</div>
+        `;
+        
+        secondaryOptions = `
+          <div class="secondary-downloads">
+            <a href="${baseUrl}iqamah_1.0.0_amd64.AppImage" class="download-btn-secondary">
+              📦 Download AppImage (Universal)
+            </a>
           </div>
         `;
         
@@ -652,10 +664,10 @@
                 <div class="platform-name">Windows</div>
                 <a href="${baseUrl}iqamah_1.0.0_x64-setup.exe" class="platform-link">Download →</a>
               </div>
-              <div class="platform-card coming-soon">
+              <div class="platform-card">
                 <div class="platform-icon">🍎</div>
                 <div class="platform-name">macOS</div>
-                <span class="platform-link">Coming Soon</span>
+                <a href="${baseUrl}iqamah_1.0.0_x64.dmg" class="platform-link">Download →</a>
               </div>
             </div>
           </div>
@@ -681,15 +693,15 @@
                 <div class="platform-name">Windows</div>
                 <a href="${baseUrl}iqamah_1.0.0_x64-setup.exe" class="platform-link">Download →</a>
               </div>
-              <div class="platform-card coming-soon">
+              <div class="platform-card">
                 <div class="platform-icon">🍎</div>
                 <div class="platform-name">macOS</div>
-                <span class="platform-link">Soon</span>
+                <a href="${baseUrl}iqamah_1.0.0_x64.dmg" class="platform-link">Download →</a>
               </div>
-              <div class="platform-card coming-soon">
+              <div class="platform-card">
                 <div class="platform-icon">🐧</div>
                 <div class="platform-name">Linux</div>
-                <span class="platform-link">Soon</span>
+                <a href="${baseUrl}iqamah_1.0.0_amd64.deb" class="platform-link">Download →</a>
               </div>
             </div>
           </div>

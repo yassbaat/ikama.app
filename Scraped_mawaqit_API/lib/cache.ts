@@ -1,12 +1,23 @@
 // Cache utilities for storing and retrieving scraped data
-// Uses JSON files stored in the data/ directory
+// Uses in-memory cache (primary) and JSON files (secondary/persistence)
 
 import * as fs from 'fs';
 import * as path from 'path';
+import * as os from 'os';
 import { CacheMetadata } from './types';
 
+// In-memory cache for fast access and serverless environments
+// This persists as long as the container/process is alive
+const memoryCache = new Map<string, { data: any; meta: CacheMetadata }>();
+
 // Base directory for cached data files
-const DATA_DIR = path.join(__dirname, '..', 'data');
+// In Vercel/Serverless, we must use /tmp (which is ephemeral)
+// In local development, we use the local file system for persistence
+const isServerless = process.env.VERCEL || process.env.NODE_ENV === 'production';
+const DATA_DIR = isServerless
+    ? path.join(os.tmpdir(), 'mawaqit-data')
+    : path.join(__dirname, '..', 'data');
+
 const MOSQUES_DIR = path.join(DATA_DIR, 'mosques');
 
 // Default cache duration: 6 hours for prayer times, 24 hours for mosque lists
@@ -15,17 +26,34 @@ const MOSQUE_LIST_TTL_MS = 24 * 60 * 60 * 1000;   // 24 hours
 
 // Ensure data directories exist
 export function ensureDataDirs(): void {
-    if (!fs.existsSync(DATA_DIR)) {
-        fs.mkdirSync(DATA_DIR, { recursive: true });
-    }
-    if (!fs.existsSync(MOSQUES_DIR)) {
-        fs.mkdirSync(MOSQUES_DIR, { recursive: true });
+    try {
+        if (!fs.existsSync(DATA_DIR)) {
+            fs.mkdirSync(DATA_DIR, { recursive: true });
+        }
+        if (!fs.existsSync(MOSQUES_DIR)) {
+            fs.mkdirSync(MOSQUES_DIR, { recursive: true });
+        }
+    } catch (error) {
+        // Ignore FS errors in serverless if readonly, we have memory cache
+        if (!isServerless) console.warn('Failed to create cache directories:', error);
     }
 }
 
 // Generic cache read function
 // Returns null if cache miss or expired
 export function readCache<T>(cacheKey: string, ttlMs: number = MOSQUE_LIST_TTL_MS): T | null {
+    // 1. Try Memory Cache first
+    const memEntry = memoryCache.get(cacheKey);
+    if (memEntry) {
+        const expiresAt = new Date(memEntry.meta.expiresAt).getTime();
+        if (Date.now() <= expiresAt) {
+            return memEntry.data as T;
+        } else {
+            memoryCache.delete(cacheKey); // Cleanup expired
+        }
+    }
+
+    // 2. Try File System Cache
     const filePath = getCacheFilePath(cacheKey);
 
     // Check if file exists
@@ -44,21 +72,20 @@ export function readCache<T>(cacheKey: string, ttlMs: number = MOSQUE_LIST_TTL_M
             return null;
         }
 
+        // Populate memory cache for next time
+        memoryCache.set(cacheKey, cached);
+
         return cached.data;
     } catch (error) {
         // Corrupted cache file, return null to trigger fresh fetch
-        console.error(`Cache read error for ${cacheKey}:`, error);
+        // console.error(`Cache read error for ${cacheKey}:`, error); // specific error logging is noisy
         return null;
     }
 }
 
 // Generic cache write function
 export function writeCache<T>(cacheKey: string, data: T, ttlMs: number = MOSQUE_LIST_TTL_MS): void {
-    ensureDataDirs();
-
-    const filePath = getCacheFilePath(cacheKey);
     const now = new Date();
-
     const cacheEntry = {
         data,
         meta: {
@@ -68,7 +95,17 @@ export function writeCache<T>(cacheKey: string, data: T, ttlMs: number = MOSQUE_
         }
     };
 
-    fs.writeFileSync(filePath, JSON.stringify(cacheEntry, null, 2), 'utf-8');
+    // 1. Write to Memory Cache
+    memoryCache.set(cacheKey, cacheEntry);
+
+    // 2. Write to File System Cache (Best Effort)
+    try {
+        ensureDataDirs();
+        const filePath = getCacheFilePath(cacheKey);
+        fs.writeFileSync(filePath, JSON.stringify(cacheEntry, null, 2), 'utf-8');
+    } catch (error) {
+        // Ignore write errors (common in serverless /tmp if space full or permissions issue)
+    }
 }
 
 // Convert cache key to file path
@@ -99,6 +136,10 @@ export function isCacheValid(cacheKey: string, ttlMs?: number): boolean {
 
 // Get cache metadata without full data
 export function getCacheInfo(cacheKey: string): CacheMetadata | null {
+    // Check memory first
+    const memEntry = memoryCache.get(cacheKey);
+    if (memEntry) return memEntry.meta;
+
     const filePath = getCacheFilePath(cacheKey);
 
     if (!fs.existsSync(filePath)) {

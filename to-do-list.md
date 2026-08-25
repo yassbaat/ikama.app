@@ -9,4 +9,6 @@
 - [x] Test the integrated app (Tauri run)
 - [x] Verify rate limiting and caching behavior
 - [x] Integrate API into `iqamah.com` (Startup Loading)
+- [x] Create GEMINI.md context file for AI agents
+- [x] Fix prayer times loading and synchronization logic
 - [x] Deployment and Integration complete

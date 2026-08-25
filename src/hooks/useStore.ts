@@ -62,6 +62,10 @@ interface AppState {
   error: string | null;
   setError: (error: string | null) => void;
   clearError: () => void;
+  
+  // Refresh trigger
+  refreshCounter: number;
+  triggerRefresh: () => void;
 }
 
 export const useStore = create<AppState>((set) => ({
@@ -116,4 +120,7 @@ export const useStore = create<AppState>((set) => ({
   error: null,
   setError: (error) => set({ error }),
   clearError: () => set({ error: null }),
+
+  refreshCounter: 0,
+  triggerRefresh: () => set((state) => ({ refreshCounter: state.refreshCounter + 1 })),
 }));

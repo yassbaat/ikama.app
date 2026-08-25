@@ -3,7 +3,6 @@ import { useStore } from '../hooks/useStore';
 import { formatTime, getPrayerIcon, getPrayerColor } from '../services/time';
 import { CompactTimer, IqamaBadge } from './LiveTimer';
 import { Clock, Sun, Sunrise, Calendar, ChevronLeft, ChevronRight, RotateCcw, ChevronDown, ChevronUp, Bell, BellOff, X, Info } from 'lucide-react';
-import * as tauri from '../services/tauri';
 import type { Prayer } from '../types';
 
 // Simple calendar component
@@ -126,7 +125,6 @@ const PrayerDetailsModal = ({
         </div>
         
         <div className="space-y-4">
-          {/* Adhan time */}
           <div className="p-4 bg-gray-800/50 rounded-lg">
             <div className="flex items-center gap-2 text-gray-400 mb-1">
               <Sun className="w-4 h-4" />
@@ -135,7 +133,6 @@ const PrayerDetailsModal = ({
             <p className="text-2xl font-semibold">{formatTime(prayer.adhan)}</p>
           </div>
           
-          {/* Iqama time */}
           {prayer.iqama && (
             <div className="p-4 bg-gray-800/50 rounded-lg">
               <div className="flex items-center gap-2 text-gray-400 mb-1">
@@ -146,7 +143,6 @@ const PrayerDetailsModal = ({
             </div>
           )}
           
-          {/* Reference note for past dates */}
           {isPastDate && (
             <div className="p-4 bg-gray-700/30 rounded-lg flex items-start gap-3">
               <Info className="w-5 h-5 text-gray-400 flex-shrink-0 mt-0.5" />
@@ -159,7 +155,6 @@ const PrayerDetailsModal = ({
             </div>
           )}
           
-          {/* Rakah count */}
           <div className="p-4 bg-gray-800/50 rounded-lg">
             <p className="text-sm text-gray-400 mb-1">Rak'ahs</p>
             <p className="text-xl font-semibold">
@@ -188,8 +183,7 @@ export const PrayerList = () => {
     selectedDate, 
     setSelectedDate, 
     setViewingDate, 
-    setCurrentPrayerTimes, 
-    setError,
+    isLoading,
     isCalendarExpanded,
     setIsCalendarExpanded,
     selectedPrayer,
@@ -202,14 +196,12 @@ export const PrayerList = () => {
     setIqamahNotifications,
   } = useStore();
   
-  const [isLoadingDate, setIsLoadingDate] = useState(false);
   const [showMiniCalendar, setShowMiniCalendar] = useState(false);
 
   if (!currentPrayerTimes) {
     return null;
   }
 
-  // Create list of prayers with their data
   const allPrayers: { name: string; prayer: Prayer; isSunrise?: boolean }[] = [
     { name: 'Fajr', prayer: currentPrayerTimes.fajr },
     { name: 'Sunrise', prayer: { name: 'Sunrise', adhan: currentPrayerTimes.fajr.adhan }, isSunrise: true },
@@ -219,41 +211,24 @@ export const PrayerList = () => {
     { name: 'Isha', prayer: currentPrayerTimes.isha },
   ];
 
-  // Find countdown for each prayer
   const getPrayerCountdown = (name: string) => {
     return countdowns.find(c => c.prayer_name === name);
   };
 
-  // Check if viewing today's prayers
   const today = new Date().toISOString().split('T')[0];
   const isToday = selectedDate === today;
   const isPastDate = selectedDate < today;
 
-  // Format the display date
   const displayDate = new Date(selectedDate).toLocaleDateString('en-US', {
     weekday: 'short',
     month: 'short',
     day: 'numeric',
   });
 
-  const handleDateChange = async (newDate: string) => {
+  const handleDateChange = (newDate: string) => {
     if (!currentMosque || newDate === selectedDate) return;
-    
-    setIsLoadingDate(true);
-    setError(null);
-    
-    try {
-      const prayerTimes = await tauri.getPrayerTimesForMosque(currentMosque.id, undefined, newDate);
-      
-      setSelectedDate(newDate);
-      setViewingDate(new Date(newDate));
-      setCurrentPrayerTimes(prayerTimes);
-    } catch (err) {
-      console.error('Failed to load prayer times for date:', err);
-      setError(`Failed to load prayer times for ${newDate}. The date may be out of range.`);
-    } finally {
-      setIsLoadingDate(false);
-    }
+    setSelectedDate(newDate);
+    setViewingDate(new Date(newDate));
   };
 
   const handlePrevDay = () => {
@@ -277,11 +252,8 @@ export const PrayerList = () => {
     setShowPrayerDetails(true);
   };
 
-
-
   return (
     <div className="glass-card p-6">
-      {/* Header with date navigation */}
       <div className="flex items-center justify-between mb-4">
         <h3 className="text-lg font-semibold flex items-center gap-2">
           <Clock className="w-5 h-5 text-primary-500" />
@@ -291,8 +263,7 @@ export const PrayerList = () => {
         <div className="flex items-center gap-2">
           <button
             onClick={handlePrevDay}
-            disabled={isLoadingDate}
-            className="p-1.5 rounded-lg hover:bg-gray-700/50 disabled:opacity-50 transition-colors"
+            className="p-1.5 rounded-lg hover:bg-gray-700/50 transition-colors"
             title="Previous day"
           >
             <ChevronLeft className="w-4 h-4" />
@@ -302,7 +273,6 @@ export const PrayerList = () => {
             <button
               onClick={() => setShowMiniCalendar(!showMiniCalendar)}
               className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-gray-800/50 hover:bg-gray-700/50 text-sm font-medium transition-colors"
-              disabled={isLoadingDate}
             >
               <Calendar className="w-4 h-4 text-primary-400" />
               <span className="text-gray-300">{displayDate}</span>
@@ -319,8 +289,7 @@ export const PrayerList = () => {
           
           <button
             onClick={handleNextDay}
-            disabled={isLoadingDate}
-            className="p-1.5 rounded-lg hover:bg-gray-700/50 disabled:opacity-50 transition-colors"
+            className="p-1.5 rounded-lg hover:bg-gray-700/50 transition-colors"
             title="Next day"
           >
             <ChevronRight className="w-4 h-4" />
@@ -329,7 +298,6 @@ export const PrayerList = () => {
           {!isToday && (
             <button
               onClick={handleToday}
-              disabled={isLoadingDate}
               className="p-1.5 rounded-lg hover:bg-gray-700/50 text-primary-400 hover:text-primary-300 transition-colors"
               title="Go to today"
             >
@@ -339,7 +307,6 @@ export const PrayerList = () => {
         </div>
       </div>
 
-      {/* Expandable calendar */}
       <div className="mb-4">
         <button
           onClick={() => setIsCalendarExpanded(!isCalendarExpanded)}
@@ -363,7 +330,6 @@ export const PrayerList = () => {
         )}
       </div>
 
-      {/* Notification toggles */}
       {isToday && (
         <div className="flex items-center gap-4 mb-4 p-3 bg-gray-800/30 rounded-lg">
           <button
@@ -387,7 +353,6 @@ export const PrayerList = () => {
         </div>
       )}
 
-      {/* Reference note for past dates */}
       {isPastDate && (
         <div className="mb-4 p-3 bg-gray-700/30 rounded-lg flex items-start gap-3">
           <Info className="w-5 h-5 text-gray-400 flex-shrink-0 mt-0.5" />
@@ -397,14 +362,14 @@ export const PrayerList = () => {
         </div>
       )}
 
-      {isLoadingDate && (
+      {isLoading && (
         <div className="flex items-center justify-center py-8">
           <div className="w-6 h-6 border-2 border-primary-500 border-t-transparent rounded-full animate-spin" />
           <span className="ml-2 text-gray-400">Loading prayer times...</span>
         </div>
       )}
 
-      {!isLoadingDate && (
+      {!isLoading && (
         <div className="space-y-3">
           {allPrayers.map(({ name, prayer, isSunrise }) => {
             const isNext = isToday && nextPrayer?.prayer.name === name;
@@ -414,7 +379,6 @@ export const PrayerList = () => {
             const hasPassed = isToday && countdown && countdown.time_until_adhan_secs <= 0 && !countdown.is_active;
             const isActive = isToday && countdown?.is_active;
             
-            // Get iqama countdown for this prayer
             const iqamaSeconds = countdown?.time_until_iqama_secs || 0;
 
             return (
@@ -478,7 +442,6 @@ export const PrayerList = () => {
         </div>
       )}
       
-      {/* Jumuah time if available */}
       {currentPrayerTimes.jumuah && (
         <div className="mt-4 p-3 bg-emerald-900/10 border border-emerald-500/20 rounded-lg">
           <div className="flex items-center gap-2">
@@ -491,7 +454,6 @@ export const PrayerList = () => {
         </div>
       )}
 
-      {/* Prayer details modal */}
       <PrayerDetailsModal
         prayer={selectedPrayer}
         isOpen={showPrayerDetails}

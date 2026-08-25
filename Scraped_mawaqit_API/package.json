@@ -3,7 +3,6 @@
     "version": "1.0.0",
     "description": "API that scrapes Mawaqit mosque data and exposes prayer times",
     "scripts": {
-        "dev": "vercel dev",
         "build": "echo 'Vercel will handle the build'",
         "test": "vitest",
         "parse-countries": "npx ts-node scripts/parse-countries.ts",

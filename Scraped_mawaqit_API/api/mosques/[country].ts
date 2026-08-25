@@ -2,9 +2,8 @@
 // Returns list of mosques for a specific country code by fetching from Mawaqit API
 
 import type { VercelRequest, VercelResponse } from '@vercel/node';
-
-// Mawaqit Map API endpoint
-const MAWAQIT_MAP_API = 'https://mawaqit.net/api/2.0/mosque/map';
+import { fetchMosquesByCountry } from '../../lib/scraper';
+import { Mosque } from '../../lib/types';
 
 export default async function handler(
     req: VercelRequest,
@@ -29,42 +28,31 @@ export default async function handler(
     }
 
     try {
-        // Fetch mosques directly from Mawaqit API
-        const url = `${MAWAQIT_MAP_API}/${countryCode}`;
-        const mawaqitResponse = await fetch(url, {
-            headers: {
-                'User-Agent': 'MawaqitScraperAPI/1.0',
-                'Accept': 'application/json'
-            }
-        });
-
-        if (!mawaqitResponse.ok) {
-            throw new Error(`Mawaqit API error: ${mawaqitResponse.status}`);
-        }
-
-        // Define mosque type for filtering
-        interface MawaqitMosque {
-            slug: string;
-            name?: string;
-            city?: string;
-            address?: string;
-            lat?: number;
-            lng?: number;
-        }
-
-        const mosques = (await mawaqitResponse.json()) as MawaqitMosque[];
+        // Fetch mosques using shared scraper logic
+        const mosques = await fetchMosquesByCountry(countryCode);
 
         // Optional: filter by search query
         const query = req.query.q as string | undefined;
-        let filteredMosques: MawaqitMosque[] = mosques;
+        let filteredMosques: Mosque[] = mosques;
 
         if (query) {
-            const searchTerm = query.toLowerCase();
-            filteredMosques = mosques.filter((m) =>
-                (m.name?.toLowerCase() || '').includes(searchTerm) ||
-                (m.city?.toLowerCase() || '').includes(searchTerm) ||
-                (m.address?.toLowerCase() || '').includes(searchTerm)
-            );
+            const normalize = (str: string) =>
+                str.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
+
+            const searchTerm = normalize(query);
+
+            filteredMosques = mosques.filter((m) => {
+                const name = normalize(m.name || '');
+                const city = normalize(m.city || '');
+                const address = normalize(m.address || '');
+                // Also search by slug as a fallback
+                const slug = normalize(m.slug || '');
+
+                return name.includes(searchTerm) ||
+                    city.includes(searchTerm) ||
+                    address.includes(searchTerm) ||
+                    slug.includes(searchTerm);
+            });
         }
 
         // Build response

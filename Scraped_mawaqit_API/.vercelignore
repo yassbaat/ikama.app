@@ -5,7 +5,7 @@ node_modules/
 *.md
 scripts/
 data/
-lib/
+# lib/ - DO NOT IGNORE - Required for API functions
 *.json
 !vercel.json
 !package.json

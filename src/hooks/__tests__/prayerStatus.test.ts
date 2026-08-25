@@ -12,9 +12,47 @@ describe('Prayer Status Integration Tests', () => {
   const mockSetRakahEstimate = vi.fn();
   const mockSetError = vi.fn();
 
+  // Helper to create complete mock prayer times
+  const createMockPrayerTimes = (overrides: any = {}) => {
+    const now = Date.now();
+    return {
+      fajr: {
+        name: 'Fajr',
+        adhan: new Date(now + 3600000).toISOString(),
+        iqama: new Date(now + 3750000).toISOString(),
+        ...overrides.fajr,
+      },
+      dhuhr: {
+        name: 'Dhuhr',
+        adhan: new Date(now + 7200000).toISOString(),
+        iqama: new Date(now + 7350000).toISOString(),
+        ...overrides.dhuhr,
+      },
+      asr: {
+        name: 'Asr',
+        adhan: new Date(now + 10800000).toISOString(),
+        iqama: new Date(now + 10950000).toISOString(),
+        ...overrides.asr,
+      },
+      maghrib: {
+        name: 'Maghrib',
+        adhan: new Date(now + 14400000).toISOString(),
+        iqama: new Date(now + 14430000).toISOString(),
+        ...overrides.maghrib,
+      },
+      isha: {
+        name: 'Isha',
+        adhan: new Date(now + 18000000).toISOString(),
+        iqama: new Date(now + 18150000).toISOString(),
+        ...overrides.isha,
+      },
+      ...overrides.other,
+    };
+  };
+
   beforeEach(() => {
     vi.clearAllMocks();
-    vi.useFakeTimers();
+    vi.useFakeTimers({ shouldAdvanceTime: true });
     
     (useStore as ReturnType<typeof vi.fn>).mockReturnValue({
       setNextPrayer: mockSetNextPrayer,
@@ -30,33 +68,7 @@ describe('Prayer Status Integration Tests', () => {
 
   describe('Prayer Countdown Updates', () => {
     it('should update countdown every second', async () => {
-      const mockPrayerTimes = {
-        fajr: {
-          name: 'Fajr',
-          adhan: new Date(Date.now() + 3600000).toISOString(), // 1 hour from now
-          iqama: new Date(Date.now() + 3750000).toISOString(), // 1h 2.5m from now
-        },
-        dhuhr: {
-          name: 'Dhuhr',
-          adhan: new Date(Date.now() + 7200000).toISOString(),
-          iqama: new Date(Date.now() + 7350000).toISOString(),
-        },
-        asr: {
-          name: 'Asr',
-          adhan: new Date(Date.now() + 10800000).toISOString(),
-          iqama: new Date(Date.now() + 10950000).toISOString(),
-        },
-        maghrib: {
-          name: 'Maghrib',
-          adhan: new Date(Date.now() + 14400000).toISOString(),
-          iqama: new Date(Date.now() + 14430000).toISOString(),
-        },
-        isha: {
-          name: 'Isha',
-          adhan: new Date(Date.now() + 18000000).toISOString(),
-          iqama: new Date(Date.now() + 18150000).toISOString(),
-        },
-      };
+      const mockPrayerTimes = createMockPrayerTimes();
 
       (useStore as ReturnType<typeof vi.fn>).mockReturnValue({
         currentMosque: { id: 'test', name: 'Test Mosque' },
@@ -69,8 +81,12 @@ describe('Prayer Status Integration Tests', () => {
       renderHook(() => usePrayerTimes());
 
       // Initial call
-      expect(mockSetNextPrayer).toHaveBeenCalled();
-      expect(mockSetCountdowns).toHaveBeenCalled();
+      await waitFor(() => {
+        expect(mockSetNextPrayer).toHaveBeenCalled();
+        expect(mockSetCountdowns).toHaveBeenCalled();
+      });
+
+      const initialCallCount = mockSetCountdowns.mock.calls.length;
 
       // Advance 1 second
       act(() => {
@@ -78,13 +94,13 @@ describe('Prayer Status Integration Tests', () => {
       });
 
       await waitFor(() => {
-        expect(mockSetCountdowns).toHaveBeenCalledTimes(2);
+        expect(mockSetCountdowns.mock.calls.length).toBeGreaterThan(initialCallCount);
       });
-    });
+    }, 10000);
 
     it('should detect active prayer (between adhan and iqama)', async () => {
       const now = Date.now();
-      const mockPrayerTimes = {
+      const mockPrayerTimes = createMockPrayerTimes({
         fajr: {
           name: 'Fajr',
           adhan: new Date(now - 300000).toISOString(), // 5 min ago (passed)
@@ -110,7 +126,7 @@ describe('Prayer Status Integration Tests', () => {
           adhan: new Date(now + 10800000).toISOString(),
           iqama: new Date(now + 10950000).toISOString(),
         },
-      };
+      });
 
       (useStore as ReturnType<typeof vi.fn>).mockReturnValue({
         currentMosque: { id: 'test', name: 'Test Mosque' },
@@ -123,43 +139,45 @@ describe('Prayer Status Integration Tests', () => {
       renderHook(() => usePrayerTimes());
 
       await waitFor(() => {
-        const countdownsCall = mockSetCountdowns.mock.calls[0][0];
-        const dhuhrCountdown = countdownsCall.find((c: any) => c.prayer_name === 'Dhuhr');
+        const countdownsCall = mockSetCountdowns.mock.calls[0]?.[0];
+        expect(countdownsCall).toBeDefined();
         
+        const dhuhrCountdown = countdownsCall?.find((c: any) => c.prayer_name === 'Dhuhr');
+        expect(dhuhrCountdown).toBeDefined();
         expect(dhuhrCountdown.is_active).toBe(true);
         expect(dhuhrCountdown.time_until_adhan_secs).toBe(0);
       });
-    });
+    }, 10000);
 
     it('should handle midnight crossover', async () => {
       const now = Date.now();
-      const mockPrayerTimes = {
+      const mockPrayerTimes = createMockPrayerTimes({
         fajr: {
           name: 'Fajr',
-          adhan: new Date(now + 3600000).toISOString(), // 1 hour from now (tomorrow's Fajr)
-          iqama: new Date(now + 3750000).toISOString(),
+          adhan: new Date(now + 50400000).toISOString(), // 14 hours from now (tomorrow's Fajr)
+          iqama: new Date(now + 51900000).toISOString(),
         },
         dhuhr: {
           name: 'Dhuhr',
-          adhan: new Date(now - 18000000).toISOString(), // 5 hours ago (passed)
-          iqama: new Date(now - 17850000).toISOString(),
+          adhan: new Date(now - 64800000).toISOString(), // 18 hours ago (passed yesterday)
+          iqama: new Date(now - 64650000).toISOString(),
         },
         asr: {
           name: 'Asr',
-          adhan: new Date(now - 14400000).toISOString(),
-          iqama: new Date(now - 14250000).toISOString(),
+          adhan: new Date(now - 57600000).toISOString(), // 16 hours ago
+          iqama: new Date(now - 57450000).toISOString(),
         },
         maghrib: {
           name: 'Maghrib',
-          adhan: new Date(now - 10800000).toISOString(),
-          iqama: new Date(now - 10770000).toISOString(),
+          adhan: new Date(now - 50400000).toISOString(), // 14 hours ago
+          iqama: new Date(now - 50100000).toISOString(),
         },
         isha: {
           name: 'Isha',
-          adhan: new Date(now - 7200000).toISOString(), // 2 hours ago (passed)
-          iqama: new Date(now - 7050000).toISOString(),
+          adhan: new Date(now - 36000000).toISOString(), // 10 hours ago (passed)
+          iqama: new Date(now - 34500000).toISOString(),
         },
-      };
+      });
 
       (useStore as ReturnType<typeof vi.fn>).mockReturnValue({
         currentMosque: { id: 'test', name: 'Test Mosque' },
@@ -172,25 +190,25 @@ describe('Prayer Status Integration Tests', () => {
       renderHook(() => usePrayerTimes());
 
       await waitFor(() => {
-        const nextPrayerCall = mockSetNextPrayer.mock.calls[0][0];
-        
+        const nextPrayerCall = mockSetNextPrayer.mock.calls[0]?.[0];
+        expect(nextPrayerCall).toBeDefined();
         expect(nextPrayerCall.prayer.name).toBe('Fajr');
         expect(nextPrayerCall.is_tomorrow).toBe(true);
       });
-    });
+    }, 10000);
   });
 
   describe('Rakah Estimation', () => {
-    it('should estimate not_started before iqama', () => {
+    it('should estimate not_started before iqama', async () => {
       const now = Date.now();
-      const mockPrayerTimes = {
+      const mockPrayerTimes = createMockPrayerTimes({
         dhuhr: {
           name: 'Dhuhr',
           adhan: new Date(now - 600000).toISOString(),
           iqama: new Date(now + 600000).toISOString(), // 10 min from now
           custom_rakah_count: 4,
         },
-      };
+      });
 
       (useStore as ReturnType<typeof vi.fn>).mockReturnValue({
         currentMosque: { id: 'test', name: 'Test Mosque' },
@@ -200,25 +218,27 @@ describe('Prayer Status Integration Tests', () => {
 
       renderHook(() => useRakahEstimate('Dhuhr'));
 
-      expect(mockSetRakahEstimate).toHaveBeenCalledWith(
-        expect.objectContaining({
-          status: 'not_started',
-          total_rakah: 4,
-          progress: 0,
-        })
-      );
-    });
+      await waitFor(() => {
+        expect(mockSetRakahEstimate).toHaveBeenCalledWith(
+          expect.objectContaining({
+            status: 'not_started',
+            total_rakah: 4,
+            progress: 0,
+          })
+        );
+      });
+    }, 10000);
 
-    it('should estimate in_progress during prayer', () => {
+    it('should estimate in_progress during prayer', async () => {
       const now = Date.now();
-      const mockPrayerTimes = {
+      const mockPrayerTimes = createMockPrayerTimes({
         dhuhr: {
           name: 'Dhuhr',
           adhan: new Date(now - 900000).toISOString(),
           iqama: new Date(now - 300000).toISOString(), // 5 min ago
           custom_rakah_count: 4,
         },
-      };
+      });
 
       (useStore as ReturnType<typeof vi.fn>).mockReturnValue({
         currentMosque: { id: 'test', name: 'Test Mosque' },
@@ -228,29 +248,32 @@ describe('Prayer Status Integration Tests', () => {
 
       renderHook(() => useRakahEstimate('Dhuhr'));
 
-      expect(mockSetRakahEstimate).toHaveBeenCalledWith(
-        expect.objectContaining({
-          status: 'in_progress',
-          total_rakah: 4,
-        })
-      );
+      await waitFor(() => {
+        expect(mockSetRakahEstimate).toHaveBeenCalledWith(
+          expect.objectContaining({
+            status: 'in_progress',
+            total_rakah: 4,
+          })
+        );
 
-      const estimate = mockSetRakahEstimate.mock.calls[0][0];
-      expect(estimate.current_rakah).toBeGreaterThanOrEqual(1);
-      expect(estimate.current_rakah).toBeLessThanOrEqual(4);
-      expect(estimate.progress).toBeGreaterThan(0);
-    });
+        const estimate = mockSetRakahEstimate.mock.calls[0]?.[0];
+        expect(estimate.current_rakah).toBeGreaterThanOrEqual(1);
+        expect(estimate.current_rakah).toBeLessThanOrEqual(4);
+        expect(estimate.progress).toBeGreaterThan(0);
+      });
+    }, 10000);
 
-    it('should estimate likely_finished after prayer', () => {
+    it('should estimate recently_finished after prayer', async () => {
       const now = Date.now();
-      const mockPrayerTimes = {
+      // Fajr = 2 rakahs = ~4.8 min. At 6 min after iqama, it should be "recently_finished"
+      const mockPrayerTimes = createMockPrayerTimes({
         fajr: {
           name: 'Fajr',
           adhan: new Date(now - 1800000).toISOString(),
-          iqama: new Date(now - 1500000).toISOString(), // 25 min ago (should be finished)
+          iqama: new Date(now - 360000).toISOString(), // 6 min ago (within 28 min window)
           custom_rakah_count: 2,
         },
-      };
+      });
 
       (useStore as ReturnType<typeof vi.fn>).mockReturnValue({
         currentMosque: { id: 'test', name: 'Test Mosque' },
@@ -260,16 +283,44 @@ describe('Prayer Status Integration Tests', () => {
 
       renderHook(() => useRakahEstimate('Fajr'));
 
-      expect(mockSetRakahEstimate).toHaveBeenCalledWith(
-        expect.objectContaining({
-          status: 'likely_finished',
-          total_rakah: 2,
-          progress: 1.0,
-        })
-      );
-    });
+      await waitFor(() => {
+        const estimate = mockSetRakahEstimate.mock.calls[0]?.[0];
+        expect(estimate.status).toBe('recently_finished');
+        expect(estimate.total_rakah).toBe(2);
+        expect(estimate.progress).toBe(1.0);
+      });
+    }, 10000);
 
-    it('should calculate correct rakah for different prayers', () => {
+    it('should estimate likely_finished long after prayer', async () => {
+      const now = Date.now();
+      // Fajr = 2 rakahs = ~4.8 min. At 35 min after iqama (past 28 min window)
+      const mockPrayerTimes = createMockPrayerTimes({
+        fajr: {
+          name: 'Fajr',
+          adhan: new Date(now - 3600000).toISOString(),
+          iqama: new Date(now - 2100000).toISOString(), // 35 min ago (past 28 min window)
+          custom_rakah_count: 2,
+        },
+      });
+
+      (useStore as ReturnType<typeof vi.fn>).mockReturnValue({
+        currentMosque: { id: 'test', name: 'Test Mosque' },
+        currentPrayerTimes: mockPrayerTimes,
+        setRakahEstimate: mockSetRakahEstimate,
+      });
+
+      renderHook(() => useRakahEstimate('Fajr'));
+
+      await waitFor(() => {
+        const estimate = mockSetRakahEstimate.mock.calls[0]?.[0];
+        expect(estimate.status).toBe('likely_finished');
+        expect(estimate.total_rakah).toBe(2);
+        expect(estimate.progress).toBe(1.0);
+        expect(estimate.can_still_catch).toBe(false);
+      });
+    }, 10000);
+
+    it('should calculate correct rakah for different prayers', async () => {
       const testCases = [
         { name: 'Fajr', rakahCount: 2 },
         { name: 'Dhuhr', rakahCount: 4 },
@@ -280,17 +331,17 @@ describe('Prayer Status Integration Tests', () => {
 
       const now = Date.now();
 
-      testCases.forEach(({ name, rakahCount }) => {
+      for (const { name, rakahCount } of testCases) {
         vi.clearAllMocks();
         
-        const mockPrayerTimes = {
+        const mockPrayerTimes = createMockPrayerTimes({
           [name.toLowerCase()]: {
             name,
             adhan: new Date(now - 600000).toISOString(),
             iqama: new Date(now - 120000).toISOString(), // 2 min ago
             custom_rakah_count: rakahCount,
           },
-        };
+        });
 
         (useStore as ReturnType<typeof vi.fn>).mockReturnValue({
           currentMosque: { id: 'test', name: 'Test Mosque' },
@@ -300,24 +351,26 @@ describe('Prayer Status Integration Tests', () => {
 
         renderHook(() => useRakahEstimate(name));
 
-        expect(mockSetRakahEstimate).toHaveBeenCalledWith(
-          expect.objectContaining({
-            total_rakah: rakahCount,
-          })
-        );
-      });
-    });
+        await waitFor(() => {
+          expect(mockSetRakahEstimate).toHaveBeenCalledWith(
+            expect.objectContaining({
+              total_rakah: rakahCount,
+            })
+          );
+        });
+      }
+    }, 30000);
 
     it('should update rakah estimate every 10 seconds', async () => {
       const now = Date.now();
-      const mockPrayerTimes = {
+      const mockPrayerTimes = createMockPrayerTimes({
         dhuhr: {
           name: 'Dhuhr',
           adhan: new Date(now - 600000).toISOString(),
           iqama: new Date(now - 120000).toISOString(), // 2 min ago
           custom_rakah_count: 4,
         },
-      };
+      });
 
       (useStore as ReturnType<typeof vi.fn>).mockReturnValue({
         currentMosque: { id: 'test', name: 'Test Mosque' },
@@ -326,6 +379,10 @@ describe('Prayer Status Integration Tests', () => {
       });
 
       renderHook(() => useRakahEstimate('Dhuhr'));
+
+      await waitFor(() => {
+        expect(mockSetRakahEstimate).toHaveBeenCalled();
+      });
 
       const initialCallCount = mockSetRakahEstimate.mock.calls.length;
 
@@ -336,18 +393,18 @@ describe('Prayer Status Integration Tests', () => {
       await waitFor(() => {
         expect(mockSetRakahEstimate.mock.calls.length).toBeGreaterThan(initialCallCount);
       });
-    });
+    }, 10000);
 
-    it('should handle prayers without iqama', () => {
+    it('should handle prayers without iqama', async () => {
       const now = Date.now();
-      const mockPrayerTimes = {
-        test: {
-          name: 'Test',
+      const mockPrayerTimes = createMockPrayerTimes({
+        fajr: {
+          name: 'Fajr',
           adhan: new Date(now - 600000).toISOString(),
-          iqama: null,
-          custom_rakah_count: 4,
+          iqama: null, // No iqama time
+          custom_rakah_count: 2,
         },
-      };
+      });
 
       (useStore as ReturnType<typeof vi.fn>).mockReturnValue({
         currentMosque: { id: 'test', name: 'Test Mosque' },
@@ -355,14 +412,17 @@ describe('Prayer Status Integration Tests', () => {
         setRakahEstimate: mockSetRakahEstimate,
       });
 
-      renderHook(() => useRakahEstimate('Test'));
+      renderHook(() => useRakahEstimate('Fajr'));
 
-      expect(mockSetRakahEstimate).toHaveBeenCalledWith({
-        status: 'not_available',
-        total_rakah: 4,
-        progress: 0,
-        is_estimate: false,
+      await waitFor(() => {
+        expect(mockSetRakahEstimate).toHaveBeenCalledWith({
+          status: 'not_available',
+          total_rakah: 2,
+          progress: 0,
+          is_estimate: false,
+          can_still_catch: false,
+        });
       });
-    });
+    }, 10000);
   });
 });

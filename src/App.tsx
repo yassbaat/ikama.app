@@ -1,4 +1,3 @@
-import { useEffect } from 'react';
 import { Header } from './components/Header';
 import { MosqueSelector } from './components/MosqueSelector';
 import { NextPrayerCard } from './components/NextPrayerCard';
@@ -8,61 +7,19 @@ import { ErrorDisplay } from './components/ErrorDisplay';
 import { NightPrayerCard } from './components/NightPrayerCard';
 import { usePrayerTimes } from './hooks/usePrayerTimes';
 import { useStore } from './hooks/useStore';
-import * as tauri from './services/tauri';
-import * as mawaqitApi from './services/mawaqitApi';
 
 function App() {
   const {
     isLoading,
     currentMosque,
     currentPrayerTimes,
-    setCurrentMosque,
-    setCurrentPrayerTimes,
-    setError,
-    selectedDate
   } = useStore();
+  
+  // This hook handles:
+  // 1. Loading saved mosque on startup
+  // 2. Fetching prayer times when mosque or date changes
+  // 3. Calculating live countdowns and rak'ah estimation
   usePrayerTimes();
-
-  // Load saved mosque on startup
-  useEffect(() => {
-    const loadSavedMosque = async () => {
-      // Only load if no mosque is currently selected
-      if (currentMosque) return;
-
-      try {
-        console.log('Loading saved mosque...');
-        const savedMosque = await tauri.getSelectedMosque();
-
-        if (savedMosque) {
-          console.log('Found saved mosque:', savedMosque.name);
-
-          // Load prayer times for the saved mosque from the Scraper API
-          try {
-            const prayerTimes = await mawaqitApi.getPrayerTimes(savedMosque.id, selectedDate);
-
-            if (!prayerTimes) {
-              throw new Error('Could not fetch prayer times from API');
-            }
-
-            setCurrentMosque(savedMosque);
-            setCurrentPrayerTimes(prayerTimes);
-            console.log('Loaded prayer times for saved mosque');
-          } catch (ptErr) {
-            console.error('Failed to load prayer times for saved mosque:', ptErr);
-            // Still set the mosque so user can see it was selected
-            setCurrentMosque(savedMosque);
-            setError('Failed to load prayer times. Please try refreshing or selecting the mosque again.');
-          }
-        } else {
-          console.log('No saved mosque found');
-        }
-      } catch (err) {
-        console.error('Failed to load saved mosque:', err);
-      }
-    };
-
-    loadSavedMosque();
-  }, [currentMosque, setCurrentMosque, setCurrentPrayerTimes, setError, selectedDate]);
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-gray-900 via-gray-900 to-gray-800">
@@ -76,9 +33,12 @@ function App() {
 
             {currentMosque && !currentPrayerTimes && (
               <div className="glass-card p-6 text-center">
-                <p className="text-yellow-400">
-                  Loading prayer times... If this persists, try using the manual URL entry option.
-                </p>
+                <div className="flex flex-col items-center gap-4">
+                  <div className="w-8 h-8 border-2 border-primary-500 border-t-transparent rounded-full animate-spin" />
+                  <p className="text-yellow-400">
+                    Loading prayer times... If this persists, try another mosque.
+                  </p>
+                </div>
               </div>
             )}
 

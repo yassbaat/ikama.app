@@ -1,16 +1,71 @@
 import { useEffect, useState, useCallback } from 'react';
 import { useStore } from './useStore';
 import * as tauri from '../services/tauri';
+import * as mawaqitApi from '../services/mawaqitApi';
 
 export const usePrayerTimes = () => {
   const { 
     currentMosque, 
     currentPrayerTimes,
+    setCurrentMosque,
+    setCurrentPrayerTimes,
     setNextPrayer, 
     setCountdowns, 
-    setError 
+    setError,
+    setIsLoading,
+    selectedDate,
+    refreshCounter
   } = useStore();
   const [refreshInterval, setRefreshInterval] = useState<ReturnType<typeof setInterval> | null>(null);
+
+  // Function to fetch prayer times from the API
+  const loadPrayerTimes = useCallback(async (mosqueId: string, date: string) => {
+    setIsLoading(true);
+    try {
+      console.log('Fetching prayer times for:', mosqueId, 'on date:', date);
+      const times = await mawaqitApi.getPrayerTimes(mosqueId, date);
+      if (times) {
+        setCurrentPrayerTimes(times);
+        setError(null);
+      } else {
+        throw new Error('Could not fetch prayer times from API');
+      }
+    } catch (err) {
+      console.error('Failed to fetch prayer times:', err);
+      setError('Failed to load prayer times. Please check your connection or try another mosque.');
+    } finally {
+      setIsLoading(false);
+    }
+  }, [setCurrentPrayerTimes, setError, setIsLoading]);
+
+  // Initial load on startup
+  useEffect(() => {
+    const initApp = async () => {
+      if (currentMosque) return;
+
+      try {
+        console.log('Startup: Loading saved mosque...');
+        const savedMosque = await tauri.getSelectedMosque();
+        
+        if (savedMosque) {
+          console.log('Startup: Found saved mosque:', savedMosque.name);
+          setCurrentMosque(savedMosque);
+          // The other useEffect will catch currentMosque change and load prayer times
+        }
+      } catch (err) {
+        console.error('Startup: Failed to load saved mosque:', err);
+      }
+    };
+
+    initApp();
+  }, [currentMosque, setCurrentMosque]);
+
+  // Load prayer times when mosque or date changes
+  useEffect(() => {
+    if (currentMosque) {
+      loadPrayerTimes(currentMosque.id, selectedDate);
+    }
+  }, [currentMosque?.id, selectedDate, loadPrayerTimes, refreshCounter]);
 
   const refreshPrayerData = useCallback(async () => {
     if (!currentMosque || !currentPrayerTimes) return;
@@ -87,9 +142,9 @@ export const usePrayerTimes = () => {
       setCountdowns(countdowns);
     } catch (err) {
       console.error('Failed to refresh prayer data:', err);
-      setError(err instanceof Error ? err.message : 'Failed to refresh prayer data');
+      // Don't show global error for background refresh unless it's critical
     }
-  }, [currentMosque, currentPrayerTimes, setNextPrayer, setCountdowns, setError]);
+  }, [currentMosque, currentPrayerTimes, setNextPrayer, setCountdowns]);
 
   useEffect(() => {
     if (!currentMosque || !currentPrayerTimes) {

@@ -1,0 +1,11 @@
+- Refactored API routes to use shared scraping logic (DRY principle).
+- Enhanced search functionality in `api/mosques/[country]` to be accent-insensitive and fuzzy-like.
+- Verified core scraping logic passed all local tests.
+- Created premium, responsive project page (public/index.html) with branding guidelines.
+- Added live interactive demo to the landing page.
+- Added usage documentation for all API endpoints.
+- Optimized landing page for SEO with meta tags and targeted keywords.
+- Expanded landing page content with "How it Works", "Use Cases", and "FAQ" sections.
+- Updated `/api/countries` to return the full list of 159 countries.
+- Enhanced landing page demo with interactive search query support.
+- Configured dynamic base URLs in documentation for better DX.

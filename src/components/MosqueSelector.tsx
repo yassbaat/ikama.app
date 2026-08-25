@@ -18,7 +18,7 @@ const COUNTRIES = [
 ];
 
 export const MosqueSelector = () => {
-  const { currentMosque, setCurrentMosque, setCurrentPrayerTimes, setError, clearError, selectedDate } = useStore();
+  const { currentMosque, setCurrentMosque, setCurrentPrayerTimes, clearError, triggerRefresh } = useStore();
   const { favoriteMosques, addFavorite, removeFavorite } = useFavoriteMosques();
   const [isOpen, setIsOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
@@ -33,7 +33,7 @@ export const MosqueSelector = () => {
   // Manual URL entry
   const [showManualEntry, setShowManualEntry] = useState(false);
   const [manualUrl, setManualUrl] = useState('');
-  const [isLoadingPrayerTimes, setIsLoadingPrayerTimes] = useState(false);
+  const [isLoadingAction, setIsLoadingAction] = useState(false);
 
   useEffect(() => {
     tauri.getActiveProvider().then((provider) => {
@@ -53,35 +53,36 @@ export const MosqueSelector = () => {
     });
   }, []);
 
-  const handleSearch = async () => {
-    if (!searchQuery.trim()) return; // Don't search if query is empty
+  // Debounced search effect
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      if (searchQuery.trim().length >= 2) {
+        handleSearch();
+      } else {
+        setSearchResults([]);
+      }
+    }, 500); // 500ms debounce
 
-    setIsSearching(true); // Start loading state
-    setSearchError(null); // Clear previous errors
-    clearError(); // Clear global errors
+    return () => clearTimeout(timer);
+  }, [searchQuery, selectedCountry]);
+
+  const handleSearch = async () => {
+    if (!searchQuery.trim()) return;
+
+    setIsSearching(true);
+    setSearchError(null);
 
     try {
-      // Use the new Scraped Mawaqit API for searching
       const results = await mawaqitApi.searchMosques(selectedCountry, searchQuery);
-      setSearchResults(results); // Update UI with results
-
-      if (results.length === 0) {
-        // Show user-friendly error if no results found
-        setSearchError(`No mosques found in ${selectedCountry}. Try another country or enter URL manually.`);
-      }
+      setSearchResults(results);
     } catch (err) {
       console.error('Search failed:', err);
-      setSearchError('Search failed. Please try again.');
     } finally {
-      setIsSearching(false); // End loading state
+      setIsSearching(false);
     }
   };
 
   const extractSlugFromUrl = (url: string): string | null => {
-    // Handle various Mawaqit URL formats
-    // https://mawaqit.net/en/jamii-lqsiba-benzrt-7000-tunisia
-    // https://mawaqit.net/fr/mosquee-name-1234-france
-
     try {
       const urlObj = new URL(url);
       if (!urlObj.hostname.includes('mawaqit.net')) {
@@ -89,13 +90,11 @@ export const MosqueSelector = () => {
       }
 
       const pathParts = urlObj.pathname.split('/').filter(Boolean);
-      // Should be at least 2 parts: language and slug
       if (pathParts.length >= 2) {
         return pathParts[pathParts.length - 1];
       }
       return null;
     } catch {
-      // If not a valid URL, assume it's a slug directly
       if (url.includes('-') && url.length > 5) {
         return url.trim();
       }
@@ -106,7 +105,7 @@ export const MosqueSelector = () => {
   const handleManualUrlSubmit = async () => {
     if (!manualUrl.trim()) return;
 
-    setIsLoadingPrayerTimes(true);
+    setIsLoadingAction(true);
     setSearchError(null);
     clearError();
 
@@ -115,90 +114,60 @@ export const MosqueSelector = () => {
 
       if (!slug) {
         setSearchError('Invalid Mawaqit URL. Please use format: https://mawaqit.net/en/mosque-name-id-country');
-        setIsLoadingPrayerTimes(false);
+        setIsLoadingAction(false);
         return;
       }
 
-      console.log('Fetching prayer times for slug:', slug, 'on date:', selectedDate);
+      // Create mosque object
+      const mosque: Mosque = {
+        id: slug,
+        name: slug.split('-').map(s => s.charAt(0).toUpperCase() + s.slice(1)).join(' '),
+        address: manualUrl,
+        is_favorite: false,
+      };
 
-      // Try to get prayer times from Scraper API
-      const prayerTimes = await mawaqitApi.getPrayerTimes(slug, selectedDate);
+      // Set mosque and clear current times to trigger new fetch in hook
+      setCurrentPrayerTimes(null);
+      setCurrentMosque(mosque);
+      setIsOpen(false);
+      setShowManualEntry(false);
+      setManualUrl('');
 
-      if (prayerTimes) {
-        // Create mosque object from prayer times
-        const mosque: Mosque = {
-          id: slug,
-          name: prayerTimes.mosque_id || slug,
-          address: manualUrl,
-          city: undefined,
-          country: undefined,
-          is_favorite: false,
-        };
-
-        setCurrentMosque(mosque);
-        setCurrentPrayerTimes(prayerTimes);
-        setIsOpen(false);
-        setShowManualEntry(false);
-        setManualUrl('');
-
-        // Add to favorites automatically
-        await addFavorite(mosque);
-
-        // Save selected mosque for persistence
-        try {
-          await tauri.saveSelectedMosque(mosque);
-          console.log('Saved selected mosque to database (manual URL)');
-        } catch (saveErr) {
-          console.error('Failed to save mosque selection:', saveErr);
-        }
-      }
+      // Add to favorites and save to database
+      await addFavorite(mosque);
+      await tauri.saveSelectedMosque(mosque);
+      
     } catch (err) {
-      console.error('Failed to load prayer times:', err);
-      setError('Failed to load prayer times. Please check the URL and try again.');
-      setSearchError('Could not fetch prayer times. The URL may be invalid or the mosque page may not have prayer times available.');
+      console.error('Failed to handle manual URL:', err);
+      setSearchError('Error processing mosque URL. Please try again.');
     } finally {
-      setIsLoadingPrayerTimes(false);
+      setIsLoadingAction(false);
     }
   };
 
   const handleSelectMosque = async (mosque: Mosque) => {
-    setIsLoadingPrayerTimes(true); // Start loading state
-    clearError(); // Clear global errors
+    setIsLoadingAction(true);
+    clearError();
 
     try {
-      console.log('Loading prayer times for mosque:', mosque.id, 'on date:', selectedDate);
-
-      // Use the new Scraped Mawaqit API for fetching times
-      const prayerTimes = await mawaqitApi.getPrayerTimes(mosque.id, selectedDate);
-
-      if (!prayerTimes) {
-        throw new Error('No prayer times returned');
-      }
-
-      setCurrentMosque(mosque); // Set active mosque in state
-      setCurrentPrayerTimes(prayerTimes); // Set prayer times in state
-      setIsOpen(false); // Close dropdown
+      // Set mosque and clear current times to trigger new fetch in hook
+      setCurrentPrayerTimes(null);
+      setCurrentMosque(mosque);
+      setIsOpen(false);
 
       // Sync with local database for persistence
-      try {
-        await tauri.saveSelectedMosque(mosque);
-        console.log('Saved selected mosque to database');
-      } catch (saveErr) {
-        console.error('Failed to save mosque selection:', saveErr);
-      }
+      await tauri.saveSelectedMosque(mosque);
+      
     } catch (err) {
-      console.error('Failed to load prayer times:', err);
-      setError('Failed to load prayer times for this mosque. Please try again or use manual URL entry.');
+      console.error('Failed to select mosque:', err);
     } finally {
-      setIsLoadingPrayerTimes(false); // End loading state
+      setIsLoadingAction(false);
     }
   };
 
   const isFavorite = (mosqueId: string) => {
     return favoriteMosques.some((m) => m.id === mosqueId);
   };
-
-
 
   return (
     <div className="relative">
@@ -223,7 +192,7 @@ export const MosqueSelector = () => {
           )}
         </div>
         <div className="flex items-center gap-2">
-          {isLoadingPrayerTimes && (
+          {isLoadingAction && (
             <div className="w-4 h-4 border-2 border-primary-500 border-t-transparent rounded-full animate-spin" />
           )}
           {currentMosque && isFavorite(currentMosque.id) && (
@@ -255,7 +224,6 @@ export const MosqueSelector = () => {
                 className="bg-gray-800 border border-gray-700 rounded px-2 py-1 text-sm text-white"
                 disabled={isLoadingCountries}
               >
-                {/* Show static list if API list hasn't loaded yet */}
                 {(apiCountries.length > 0 ? apiCountries : COUNTRIES).map((country) => (
                   <option key={country.code} value={country.code}>
                     {'flag' in country ? country.flag : '📍'} {country.name}
@@ -263,7 +231,7 @@ export const MosqueSelector = () => {
                 ))}
               </select>
               <span className="text-xs text-gray-400">
-                {isLoadingCountries ? 'Loading countries...' : `${apiCountries.length || COUNTRIES.length} countries supported`}
+                {isLoadingCountries ? 'Loading...' : `${apiCountries.length || COUNTRIES.length} countries`}
               </span>
             </div>
           </div>
@@ -280,9 +248,6 @@ export const MosqueSelector = () => {
 
             {showManualEntry && (
               <div className="mt-3 space-y-2">
-                <p className="text-xs text-gray-400">
-                  Enter the full Mawaqit URL for your mosque:
-                </p>
                 <input
                   type="text"
                   placeholder="https://mawaqit.net/en/mosque-name-id-country"
@@ -292,79 +257,48 @@ export const MosqueSelector = () => {
                 />
                 <button
                   onClick={handleManualUrlSubmit}
-                  disabled={isLoadingPrayerTimes || !manualUrl.trim()}
+                  disabled={isLoadingAction || !manualUrl.trim()}
                   className="btn-primary w-full text-sm"
                 >
-                  {isLoadingPrayerTimes ? 'Loading...' : 'Load Prayer Times'}
+                  {isLoadingAction ? 'Processing...' : 'Load Prayer Times'}
                 </button>
-                <p className="text-xs text-gray-500">
-                  Example: https://mawaqit.net/en/jamii-lqsiba-benzrt-7000-tunisia
-                </p>
               </div>
             )}
           </div>
 
           {/* Search */}
           <div className="p-4 border-b border-gray-700/50">
-            <div className="flex gap-2">
-              <div className="relative flex-1">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
-                <input
-                  type="text"
-                  placeholder="Search mosques..."
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  onKeyPress={(e) => e.key === 'Enter' && handleSearch()}
-                  className="input-field w-full pl-10"
-                />
-              </div>
-              <button
-                onClick={handleSearch}
-                disabled={isSearching}
-                className="btn-primary"
-              >
-                {isSearching ? '...' : 'Search'}
-              </button>
+            <div className="relative">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+              <input
+                type="text"
+                placeholder="Search mosques..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="input-field w-full pl-10 pr-10"
+              />
+              {isSearching && (
+                <div className="absolute right-3 top-1/2 -translate-y-1/2">
+                  <div className="w-4 h-4 border-2 border-primary-500 border-t-transparent rounded-full animate-spin" />
+                </div>
+              )}
             </div>
-
-            {/* Search error */}
-            {searchError && (
-              <p className="text-xs text-red-400 mt-2">{searchError}</p>
-            )}
+            {searchError && <p className="text-xs text-red-400 mt-2">{searchError}</p>}
           </div>
 
           {/* Search results */}
           {searchResults.length > 0 && (
             <div className="p-2 border-b border-gray-700/50 max-h-48 overflow-y-auto">
-              <p className="text-xs text-gray-400 px-2 mb-2">
-                Search Results ({searchResults.length})
-              </p>
+              <p className="text-xs text-gray-400 px-2 mb-2">Search Results</p>
               {searchResults.map((mosque) => (
-                <div
-                  key={mosque.id}
-                  className="flex items-center gap-2 p-2 rounded-lg hover:bg-gray-800/50"
-                >
-                  <button
-                    onClick={() => handleSelectMosque(mosque)}
-                    className="flex-1 text-left"
-                  >
+                <div key={mosque.id} className="flex items-center gap-2 p-2 rounded-lg hover:bg-gray-800/50">
+                  <button onClick={() => handleSelectMosque(mosque)} className="flex-1 text-left">
                     <p className="font-medium">{mosque.name}</p>
-                    {mosque.address && (
-                      <p className="text-sm text-gray-400">{mosque.address}</p>
-                    )}
-                    {mosque.city && (
-                      <p className="text-xs text-gray-500">
-                        {mosque.city}{mosque.country && `, ${mosque.country}`}
-                      </p>
-                    )}
+                    <p className="text-xs text-gray-500">{mosque.city}{mosque.country && `, ${mosque.country}`}</p>
                   </button>
                   <button
-                    onClick={() =>
-                      isFavorite(mosque.id)
-                        ? removeFavorite(mosque.id)
-                        : addFavorite(mosque)
-                    }
-                    className="p-2 hover:bg-gray-700 rounded-lg transition-colors"
+                    onClick={() => isFavorite(mosque.id) ? removeFavorite(mosque.id) : addFavorite(mosque)}
+                    className="p-2 hover:bg-gray-700 rounded-lg"
                   >
                     {isFavorite(mosque.id) ? (
                       <Star className="w-4 h-4 text-yellow-400 fill-yellow-400" />
@@ -381,9 +315,7 @@ export const MosqueSelector = () => {
           <div className="p-2 max-h-48 overflow-y-auto">
             <p className="text-xs text-gray-400 px-2 mb-2">Favorites</p>
             {favoriteMosques.length === 0 ? (
-              <p className="text-gray-500 text-sm px-2 py-4 text-center">
-                No favorite mosques yet
-              </p>
+              <p className="text-gray-500 text-sm px-2 py-4 text-center">No favorite mosques</p>
             ) : (
               favoriteMosques.map((mosque) => (
                 <div
@@ -393,21 +325,11 @@ export const MosqueSelector = () => {
                     : 'hover:bg-gray-800/50'
                     }`}
                 >
-                  <button
-                    onClick={() => handleSelectMosque(mosque)}
-                    className="flex-1 text-left flex items-center gap-2"
-                  >
-                    {currentMosque?.id === mosque.id && (
-                      <Check className="w-4 h-4 text-primary-400" />
-                    )}
-                    <span className={currentMosque?.id === mosque.id ? 'text-primary-400' : ''}>
-                      {mosque.name}
-                    </span>
+                  <button onClick={() => handleSelectMosque(mosque)} className="flex-1 text-left flex items-center gap-2">
+                    {currentMosque?.id === mosque.id && <Check className="w-4 h-4 text-primary-400" />}
+                    <span className={currentMosque?.id === mosque.id ? 'text-primary-400' : ''}>{mosque.name}</span>
                   </button>
-                  <button
-                    onClick={() => removeFavorite(mosque.id)}
-                    className="p-2 hover:bg-gray-700 rounded-lg transition-colors"
-                  >
+                  <button onClick={() => removeFavorite(mosque.id)} className="p-2 hover:bg-gray-700 rounded-lg">
                     <X className="w-4 h-4 text-gray-400" />
                   </button>
                 </div>
@@ -417,13 +339,7 @@ export const MosqueSelector = () => {
         </div>
       )}
 
-      {/* Overlay to close dropdown */}
-      {isOpen && (
-        <div
-          className="fixed inset-0 z-40"
-          onClick={() => setIsOpen(false)}
-        />
-      )}
+      {isOpen && <div className="fixed inset-0 z-40" onClick={() => setIsOpen(false)} />}
     </div>
   );
 };

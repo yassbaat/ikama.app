@@ -3,3 +3,5 @@
 - [2026-02-06] Deployed Scraper API to Vercel (https://mawaqit-prayer-api.vercel.app)
 - [2026-02-06] Fixed Vercel routing and TS errors
 - [2026-02-06] Integrated API into MosqueSelector and App components
+- [2026-03-11] Created GEMINI.md context file for AI agents
+- [2026-03-11] Fixed prayer times loading: Centralized logic in usePrayerTimes hook to ensure consistent fetching on startup and date changes

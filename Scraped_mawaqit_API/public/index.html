@@ -1,5 +1,738 @@
 <!DOCTYPE html>
-<html>
-<head><title>Mawaqit API</title></head>
-<body><h1>Mawaqit Scraper API</h1></body>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Mawaqit API - Reliable Prayer Times & Mosque Timetables</title>
+    <meta name="description"
+        content="A free, reliable Prayer Times API based on Mawaqit. Get accurate mosque timetables, Adhan, and Iqama times for thousands of mosques worldwide. Open source and easy to use.">
+    <meta name="keywords"
+        content="Mawaqit API, Prayer Times API, Mosque Timetable API, Islamic Prayer API, Free Prayer Times API, Mawaqit Scraper, Adhan API, Iqama Times API, Masjid Timetable API, Salat Times API">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Figtree:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --color-primary-bg: #EBF9FA;
+            --color-accent: #2CA4AB;
+            --color-white: #FFFFFF;
+            --color-text: #272727;
+            --color-text-muted: #666666;
+            --color-border: #EEEEEE;
+            --color-code-bg: #F8F9FA;
+
+            --font-main: 'Figtree', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+
+            --spacing-unit: 4px;
+            --container-width: 1200px;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: var(--font-main);
+            color: var(--color-text);
+            background-color: var(--color-white);
+            line-height: 1.6;
+            -webkit-font-smoothing: antialiased;
+        }
+
+        /* Layout & Typography */
+        .container {
+            max-width: var(--container-width);
+            margin: 0 auto;
+            padding: 0 20px;
+        }
+
+        h1,
+        h2,
+        h3,
+        h4 {
+            font-weight: 700;
+            color: var(--color-text);
+            line-height: 1.2;
+            margin-bottom: 16px;
+        }
+
+        h1 {
+            font-size: 48px;
+            letter-spacing: -0.02em;
+        }
+
+        h2 {
+            font-size: 32px;
+            letter-spacing: -0.01em;
+        }
+
+        h3 {
+            font-size: 24px;
+        }
+
+        p {
+            font-size: 20px;
+            color: var(--color-text-muted);
+            margin-bottom: 24px;
+        }
+
+        a {
+            color: var(--color-accent);
+            text-decoration: none;
+            transition: opacity 0.2s;
+        }
+
+        a:hover {
+            opacity: 0.8;
+        }
+
+        /* Components */
+        .btn {
+            display: inline-block;
+            background: var(--color-white);
+            color: var(--color-text-muted);
+            font-weight: 600;
+            padding: 12px 32px;
+            border-radius: 15px;
+            border: 1px solid rgba(0, 0, 0, 0.05);
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+            cursor: pointer;
+            font-size: 16px;
+            transition: all 0.2s cubic-bezier(0.2, 0.8, 0.2, 1);
+            text-align: center;
+        }
+
+        .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+            color: var(--color-accent);
+        }
+
+        .btn-primary {
+            background: var(--color-accent);
+            color: var(--color-white);
+            border: none;
+            box-shadow: 0 4px 12px rgba(44, 164, 171, 0.3);
+        }
+
+        .btn-primary:hover {
+            color: var(--color-white);
+            box-shadow: 0 6px 16px rgba(44, 164, 171, 0.4);
+        }
+
+        input[type="text"] {
+            background: transparent;
+            border: 1px solid var(--color-border);
+            border-radius: 0px;
+            padding: 12px 16px;
+            font-size: 16px;
+            font-family: inherit;
+            color: var(--color-text);
+            width: 100%;
+            transition: border-color 0.2s;
+        }
+
+        input[type="text"]:focus {
+            outline: none;
+            border-color: var(--color-accent);
+        }
+
+        /* Sections */
+        header {
+            padding: 20px 0;
+            position: sticky;
+            top: 0;
+            background: rgba(255, 255, 255, 0.9);
+            backdrop-filter: blur(10px);
+            z-index: 100;
+            border-bottom: 1px solid transparent;
+            transition: border-color 0.3s;
+        }
+
+        header.scrolled {
+            border-bottom: 1px solid var(--color-border);
+        }
+
+        .header-content {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .logo {
+            font-weight: 700;
+            font-size: 24px;
+            color: var(--color-accent);
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .hero {
+            padding: 100px 0 80px;
+            text-align: center;
+            background: radial-gradient(circle at 50% 0%, var(--color-primary-bg) 0%, transparent 70%);
+        }
+
+        .hero h1 {
+            max-width: 800px;
+            margin: 0 auto 24px;
+            color: var(--color-text);
+        }
+
+        .hero p {
+            max-width: 600px;
+            margin: 0 auto 40px;
+        }
+
+        .features-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 40px;
+            margin: 80px 0;
+        }
+
+        .feature-card {
+            padding: 32px;
+            background: var(--color-white);
+            border: 1px solid var(--color-border);
+            border-radius: 0px;
+            transition: transform 0.2s;
+        }
+
+        .feature-card:hover {
+            transform: translateY(-5px);
+            border-color: var(--color-accent);
+        }
+
+        .feature-icon {
+            font-size: 32px;
+            margin-bottom: 16px;
+            display: inline-block;
+            color: var(--color-accent);
+        }
+
+        /* Documentation Section */
+        .docs-section {
+            padding: 80px 0;
+            background: var(--color-white);
+        }
+
+        .endpoint-block {
+            margin-bottom: 60px;
+            border-left: 4px solid var(--color-accent);
+            padding-left: 24px;
+        }
+
+        .endpoint-meta {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            margin-bottom: 16px;
+        }
+
+        .method {
+            font-family: monospace;
+            font-weight: 700;
+            color: var(--color-accent);
+            background: var(--color-primary-bg);
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-size: 14px;
+        }
+
+        .url {
+            font-family: monospace;
+            font-size: 18px;
+            color: var(--color-text);
+        }
+
+        .code-preview {
+            background: var(--color-code-bg);
+            padding: 20px;
+            border-radius: 8px;
+            overflow-x: auto;
+            border: 1px solid var(--color-border);
+            margin-top: 16px;
+        }
+
+        pre {
+            font-family: 'SF Mono', 'Monaco', 'Inconsolata', 'Fira Mono', 'Droid Sans Mono', 'Source Code Pro', monospace;
+            font-size: 14px;
+            color: #333;
+        }
+
+        .copy-btn {
+            float: right;
+            font-size: 12px;
+            background: transparent;
+            border: 1px solid var(--color-border);
+            padding: 4px 8px;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+
+        /* Demo Section */
+        .demo-console {
+            background: #1e1e1e;
+            color: #f0f0f0;
+            border-radius: 12px;
+            padding: 0;
+            overflow: hidden;
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.2);
+            margin-top: 40px;
+        }
+
+        .console-header {
+            background: #2d2d2d;
+            padding: 12px 20px;
+            display: flex;
+            gap: 8px;
+            align-items: center;
+        }
+
+        .dot {
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+        }
+
+        .red {
+            background: #ff5f56;
+        }
+
+        .yellow {
+            background: #ffbd2e;
+        }
+
+        .green {
+            background: #27c93f;
+        }
+
+        .console-body {
+            padding: 24px;
+            font-family: monospace;
+        }
+
+        .console-input-line {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-bottom: 10px;
+        }
+
+        .prompt {
+            color: var(--color-accent);
+        }
+
+        .demo-input {
+            background: transparent;
+            border: none;
+            color: #fff;
+            font-family: monospace;
+            font-size: 16px;
+            width: 100%;
+        }
+
+        .demo-input:focus {
+            outline: none;
+        }
+
+        .json-output {
+            color: #a8a8a8;
+            white-space: pre-wrap;
+            margin-top: 10px;
+            max-height: 300px;
+            overflow-y: auto;
+        }
+
+        .string {
+            color: #ce9178;
+        }
+
+        .number {
+            color: #b5cea8;
+        }
+
+        .key {
+            color: #9cdcfe;
+        }
+
+        footer {
+            margin-top: 100px;
+            padding: 40px 0;
+            border-top: 1px solid var(--color-border);
+            text-align: center;
+            color: var(--color-text-muted);
+            font-size: 14px;
+        }
+
+        /* Animations */
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+                transform: translateY(10px);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .animate-in {
+            animation: fadeIn 0.6s ease-out forwards;
+            opacity: 0;
+        }
+
+        .delay-1 {
+            animation-delay: 0.1s;
+        }
+
+        .delay-2 {
+            animation-delay: 0.2s;
+        }
+
+        .delay-3 {
+            animation-delay: 0.3s;
+        }
+
+        /* Responsive */
+        @media (max-width: 768px) {
+            h1 {
+                font-size: 36px;
+            }
+
+            h2 {
+                font-size: 28px;
+            }
+
+            .hero {
+                padding: 60px 0;
+            }
+        }
+
+        .step-number {
+            font-size: 64px;
+            font-weight: 700;
+            color: var(--color-accent);
+            opacity: 0.15;
+            line-height: 1;
+            margin-bottom: -20px;
+            display: block;
+            position: relative;
+            z-index: -1;
+        }
+
+        .use-case-card {
+            background: var(--color-white);
+            padding: 32px;
+            border-radius: 0px;
+            border: 1px solid var(--color-border);
+        }
+    </style>
+</head>
+
+<body>
+
+    <header id="header">
+        <div class="container header-content">
+            <div class="logo">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <path d="M12 2L2 7L12 12L22 7L12 2Z" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                        stroke-linejoin="round" />
+                    <path d="M2 17L12 22L22 17" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                        stroke-linejoin="round" />
+                    <path d="M2 12L12 17L22 12" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                        stroke-linejoin="round" />
+                </svg>
+                Mawaqit API
+            </div>
+            <a href="https://github.com/yassbaat/ikama.app" target="_blank" class="btn">GitHub</a>
+        </div>
+    </header>
+
+    <main>
+        <section class="hero container">
+            <h1 class="animate-in">A reliable Prayer Times API<br>Based on Mawaqit</h1>
+            <p class="animate-in delay-1">Get accurate Islamic prayer times, Adhan, and Iqama schedules from thousands
+                of mosques globally. The ultimate Mawaqit scraper and mosque timetable API.</p>
+            <div class="animate-in delay-2" style="display: flex; gap: 16px; justify-content: center;">
+                <a href="#docs" class="btn btn-primary">Read the Docs</a>
+                <a href="#demo" class="btn">Live Demo</a>
+            </div>
+        </section>
+
+        <section class="container">
+            <div class="features-grid animate-in delay-3">
+                <div class="feature-card">
+                    <div class="feature-icon">🌍</div>
+                    <h3>Global Mosque Coverage</h3>
+                    <p style="font-size: 16px; margin-bottom: 0;">Access real-time Masjid timetables from 159 countries.
+                        Perfect for apps needing local Salat times from Algeria to France.</p>
+                </div>
+                <div class="feature-card">
+                    <div class="feature-icon">⚡</div>
+                    <h3>High-Performance API</h3>
+                    <p style="font-size: 16px; margin-bottom: 0;">Hosted on Vercel Edge Network for blazing fast Adhan
+                        API responses. Cached for speed with no rate limits for personal use.</p>
+                </div>
+                <div class="feature-card">
+                    <div class="feature-icon">🛠</div>
+                    <h3>Developer Friendly</h3>
+                    <p style="font-size: 16px; margin-bottom: 0;">A simple, free Prayer Times API with no keys or
+                        complex OAuth. Standard JSON responses for easy integration.</p>
+                </div>
+            </div>
+        </section>
+
+        <!-- How it Works -->
+        <section class="container" style="padding: 60px 20px 80px; border-top: 1px solid var(--color-border);">
+            <div style="text-align: center; max-width: 800px; margin: 0 auto 60px;">
+                <h2>Integrate in minutes</h2>
+                <p>Skip the complex authentication dances. Just simple, raw data for your app.</p>
+            </div>
+
+            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 40px;">
+                <div>
+                    <span class="step-number">01</span>
+                    <h3 style="margin-top: 10px;">Find a Mosque</h3>
+                    <p style="font-size: 16px;">Search by country or keyword to find the specific mosque you need data
+                        for.</p>
+                </div>
+                <div>
+                    <span class="step-number">02</span>
+                    <h3 style="margin-top: 10px;">Fetch the Data</h3>
+                    <p style="font-size: 16px;">Call our REST API endpoint. No headers, no tokens, just a simple GET
+                        request.</p>
+                </div>
+                <div>
+                    <span class="step-number">03</span>
+                    <h3 style="margin-top: 10px;">Build Your UI</h3>
+                    <p style="font-size: 16px;">Use the returned JSON to display accurate Adhan and Iqama times in your
+                        application.</p>
+                </div>
+            </div>
+        </section>
+
+        <!-- Use Cases -->
+        <section style="background-color: var(--color-primary-bg); padding: 80px 0;">
+            <div class="container">
+                <h2 style="text-align: center; margin-bottom: 60px;">Built for developers</h2>
+
+                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 30px;">
+                    <div class="use-case-card">
+                        <h3 style="font-size: 20px; display: flex; align-items: center; gap: 10px;">📱 Mobile Apps</h3>
+                        <p style="font-size: 16px; margin-top: 10px; margin-bottom: 0;">Create beautiful ad-free prayer
+                            time apps for your local community.</p>
+                    </div>
+                    <div class="use-case-card">
+                        <h3 style="font-size: 20px; display: flex; align-items: center; gap: 10px;">🏠 Smart Home</h3>
+                        <p style="font-size: 16px; margin-top: 10px; margin-bottom: 0;">Display Iqama times on your
+                            MagicMirror or Home Assistant dashboard.</p>
+                    </div>
+                    <div class="use-case-card">
+                        <h3 style="font-size: 20px; display: flex; align-items: center; gap: 10px;">🕌 Masjid Displays
+                        </h3>
+                        <p style="font-size: 16px; margin-top: 10px; margin-bottom: 0;">Build custom digital signage for
+                            inside the mosque entrance.</p>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <section id="demo" class="container" style="padding: 100px 20px;">
+            <div style="text-align: center; margin-bottom: 40px;">
+                <h2>Try it yourself</h2>
+                <p>Type a country code and optional search query below.</p>
+            </div>
+
+            <div class="demo-console">
+                <div class="console-header">
+                    <div class="dot red"></div>
+                    <div class="dot yellow"></div>
+                    <div class="dot green"></div>
+                </div>
+                <div class="console-body">
+                    <div class="console-input-line">
+                        <span class="prompt">➜</span>
+                        <span style="color: #4AF626;">GET</span>
+                        <span style="color: #fff;">/api/mosques/</span>
+                        <input type="text" id="demoCountry" class="demo-input" style="width: 40px;" value="FR" spellcheck="false"
+                            maxlength="2">
+                        <span style="color: #fff;">?q=</span>
+                        <input type="text" id="demoQuery" class="demo-input" placeholder="(optional search)" spellcheck="false">
+                    </div>
+                    <div id="demoOutput" class="json-output">// Loading...</div>
+                </div>
+            </div>
+        </section>
+
+        <section id="docs" class="container docs-section">
+            <h2 style="margin-bottom: 40px;">Documentation</h2>
+
+            <div class="endpoint-block">
+                <div class="endpoint-meta">
+                    <span class="method">GET</span>
+                    <span class="url">/api/countries</span>
+                </div>
+                <h3>List all countries</h3>
+                <p style="font-size: 16px;">Get a list of all 159 supported countries and their mosque counts.</p>
+                <div class="code-preview">
+                    <pre><span class="key">curl</span> <span id="baseUrlDocs1">...</span>/api/countries</pre>
+                </div>
+            </div>
+
+            <div class="endpoint-block">
+                <div class="endpoint-meta">
+                    <span class="method">GET</span>
+                    <span class="url">/api/mosques/[country_code]</span>
+                </div>
+                <h3>Get mosques by country</h3>
+                <p style="font-size: 16px;">Fetch all mosques for a specific country using its 2-letter ISO code.
+                    Support search via <code>?q=paris</code>.</p>
+                <div class="code-preview">
+                    <pre><span class="key">curl</span> <span id="baseUrlDocs2">...</span>/api/mosques/FR?q=massy</pre>
+                </div>
+            </div>
+
+            <div class="endpoint-block">
+                <div class="endpoint-meta">
+                    <span class="method">GET</span>
+                    <span class="url">/api/prayer-times/[slug]</span>
+                </div>
+                <h3>Get prayer times</h3>
+                <p style="font-size: 16px;">Get the full schedule (iqama & adhan) for a specific mosque by its slug.</p>
+                <div class="code-preview">
+                    <pre><span class="key">curl</span> <span id="baseUrlDocs3">...</span>/api/prayer-times/mosquee-al-fatiha-massy</pre>
+                </div>
+            </div>
+
+        </section>
+
+        <!-- FAQ -->
+        <section class="container"
+            style="padding: 60px 20px 100px; border-top: 1px solid var(--color-border); max-width: 800px;">
+            <h2 style="margin-bottom: 40px;">Common Questions</h2>
+
+            <div style="grid-template-columns: 1fr; display: grid; gap: 40px;">
+                <div>
+                    <h3>Is this the official Mawaqit API?</h3>
+                    <p style="font-size: 16px; margin-bottom: 0;">No. This is an open-source scraper that makes the
+                        public data from Mawaqit accessible to developers. We are not affiliated with them.</p>
+                </div>
+                <div>
+                    <h3>Is it free?</h3>
+                    <p style="font-size: 16px; margin-bottom: 0;">Yes, 100% free and open source. You can host it
+                        yourself or use our public instance.</p>
+                </div>
+                <div>
+                    <h3>What about rate limits?</h3>
+                    <p style="font-size: 16px; margin-bottom: 0;">We cache responses aggressively on the Edge. For
+                        personal projects, you won't hit any limits. For commercial use, please deploy your own
+                        instance.</p>
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <footer class="container">
+        <p style="font-size: 14px; margin-bottom: 8px;">&copy; 2024 Mawaqit Scraper API. Open Source.</p>
+        <p style="font-size: 14px;">Not affiliated with Mawaqit official service.</p>
+    </footer>
+
+    <script>
+        // Set dynamic base URL in docs
+        const currentOrigin = window.location.origin;
+        document.getElementById('baseUrlDocs1').textContent = currentOrigin;
+        document.getElementById('baseUrlDocs2').textContent = currentOrigin;
+        document.getElementById('baseUrlDocs3').textContent = currentOrigin;
+
+        // Header scroll effect
+        window.addEventListener('scroll', () => {
+            const header = document.getElementById('header');
+            if (window.scrollY > 20) {
+                header.classList.add('scrolled');
+            } else {
+                header.classList.remove('scrolled');
+            }
+        });
+
+        // Demo functionality
+        const demoCountry = document.getElementById('demoCountry');
+        const demoQuery = document.getElementById('demoQuery');
+        const demoOutput = document.getElementById('demoOutput');
+
+        async function runDemo() {
+            const country = demoCountry.value.trim().toUpperCase();
+            const query = demoQuery.value.trim();
+            if (country.length < 2) return;
+
+            demoOutput.innerHTML = '<span style="color: #888">Fetching...</span>';
+
+            try {
+                let url = `/api/mosques/${country}`;
+                if (query) url += `?q=${encodeURIComponent(query)}`;
+                
+                const res = await fetch(url);
+                const data = await res.json();
+
+                // Pretty print JSON with colors
+                const jsonStr = JSON.stringify(data, null, 2);
+                const coloredJson = syntaxHighlight(jsonStr);
+
+                demoOutput.innerHTML = coloredJson;
+            } catch (err) {
+                demoOutput.innerHTML = `<span style="color: #ff5f56">Error: ${err.message}</span>`;
+            }
+        }
+
+        // Debounce function
+        function debounce(func, wait) {
+            let timeout;
+            return function executedFunction(...args) {
+                const later = () => {
+                    clearTimeout(timeout);
+                    func(...args);
+                };
+                clearTimeout(timeout);
+                timeout = setTimeout(later, wait);
+            };
+        }
+
+        // Real-time update with debounce
+        const debouncedDemo = debounce(runDemo, 800);
+        demoCountry.addEventListener('input', debouncedDemo);
+        demoQuery.addEventListener('input', debouncedDemo);
+
+        // Run once on load
+        runDemo();
+
+        function syntaxHighlight(json) {
+            if (typeof json != 'string') {
+                json = JSON.stringify(json, undefined, 2);
+            }
+            json = json.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+            return json.replace(/("(\\u[a-zA-Z0-9]{4}|\\[^u]|[^\\"])*"(\s*:)?|\b(true|false|null)\b|-?\d+(?:\.\d*)?(?:[eE][+\-]?\d+)?)/g, function (match) {
+                let cls = 'number';
+                if (/^"/.test(match)) {
+                    if (/:$/.test(match)) {
+                        cls = 'key';
+                    } else {
+                        cls = 'string';
+                    }
+                } else if (/true|false/.test(match)) {
+                    cls = 'boolean';
+                } else if (/null/.test(match)) {
+                    cls = 'null';
+                }
+                return '<span class="' + cls + '">' + match + '</span>';
+            });
+        }
+    </script>
+</body>
+
 </html>
